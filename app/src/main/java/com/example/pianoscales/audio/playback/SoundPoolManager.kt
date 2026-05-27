@@ -3,6 +3,7 @@ package com.example.pianoscales.audio.playback
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.util.Log
 import com.example.pianoscales.R
 import com.example.pianoscales.theory.Note
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -60,6 +61,7 @@ class SoundPoolManager @Inject constructor(
     fun playNote(note: Note) {
         val soundId = noteToSoundId[note]
         if (soundId != null && soundId != 0) {
+            Log.d("AUDIO_TEST", "Playing C4");
             soundPool.play(soundId, 1f, 1f, 1, 0, 1f)
         }
     }

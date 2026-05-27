@@ -3,7 +3,6 @@ package com.example.pianoscales.ui.practice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pianoscales.audio.pitch.PitchDetector
-import com.example.pianoscales.audio.pitch.PitchToNoteMapper
 import com.example.pianoscales.audio.playback.NotePlayer
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
@@ -24,7 +23,9 @@ data class PracticeUiState(
     val currentPlayingNote: Note? = null,
     val isListening: Boolean = false,
     val detectedNote: Note? = null,
-    val detectedFrequency: Float = 0f
+    val detectedFrequency: Float = 0f,
+    val isStablePitch: Boolean = false,
+    val inputVolume: Float = 0f
 )
 
 @HiltViewModel
@@ -73,11 +74,25 @@ class PracticeViewModel @Inject constructor(
     private fun startListening() {
         if (_uiState.value.isPlaying) return
         
-        _uiState.update { it.copy(isListening = true, detectedNote = null, detectedFrequency = 0f) }
+        _uiState.update { 
+            it.copy(
+                isListening = true, 
+                detectedNote = null, 
+                detectedFrequency = 0f,
+                isStablePitch = false,
+                inputVolume = 0f
+            ) 
+        }
         viewModelScope.launch {
-            pitchDetector.startListening { frequency ->
-                val note = PitchToNoteMapper.mapFrequencyToNote(frequency)
-                _uiState.update { it.copy(detectedFrequency = frequency, detectedNote = note) }
+            pitchDetector.startListening { note, frequency, volume, isStable ->
+                _uiState.update { 
+                    it.copy(
+                        detectedNote = note,
+                        detectedFrequency = if (note != null) frequency else 0f,
+                        inputVolume = volume,
+                        isStablePitch = isStable
+                    ) 
+                }
             }
         }
     }

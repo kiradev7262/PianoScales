@@ -4,14 +4,21 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -79,9 +86,13 @@ fun PracticeScreen(
             Spacer(modifier = Modifier.height(32.dp))
             
             if (uiState.isListening) {
+                VolumeMeter(amplitude = uiState.inputVolume)
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 DetectedNoteDisplay(
                     detectedNote = uiState.detectedNote,
-                    frequency = uiState.detectedFrequency
+                    frequency = uiState.detectedFrequency,
+                    isStable = uiState.isStablePitch
                 )
                 Spacer(modifier = Modifier.height(32.dp))
             }
@@ -118,21 +129,76 @@ fun PracticeScreen(
 }
 
 @Composable
-fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun VolumeMeter(amplitude: Float) {
+    val animatedAmplitude by animateFloatAsState(
+        targetValue = (amplitude * 5f).coerceIn(0f, 1f), // Scale up for better visibility
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "VolumeMeter"
+    )
+
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "Detected Note:",
-            style = MaterialTheme.typography.titleMedium
+            text = "Input Level",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.outline
         )
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { animatedAmplitude },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = if (animatedAmplitude > 0.8f) Color.Red else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+    }
+}
+
+@Composable
+fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float, isStable: Boolean) {
+    val statusText = when {
+        detectedNote == null -> "🎤 Listening..."
+        !isStable -> "Detecting..."
+        else -> "✅ Stable Note Detected"
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+    ) {
         Text(
-            text = detectedNote?.displayName ?: "--",
-            style = MaterialTheme.typography.displayLarge,
-            color = MaterialTheme.colorScheme.secondary
+            text = statusText,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (isStable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+            fontWeight = if (isStable) FontWeight.Bold else FontWeight.Normal
         )
-        Text(
-            text = String.format("%.1f Hz", frequency),
-            style = MaterialTheme.typography.bodyMedium
-        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = if (isStable) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.size(120.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = detectedNote?.displayName ?: "--",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = if (isStable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        
+        if (frequency > 0) {
+            Text(
+                text = String.format("%.1f Hz", frequency),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
     }
 }
 
