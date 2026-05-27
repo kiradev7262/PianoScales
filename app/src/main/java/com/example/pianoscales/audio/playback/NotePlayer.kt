@@ -9,6 +9,8 @@ import javax.inject.Singleton
 class NotePlayer @Inject constructor(
     private val soundPoolManager: SoundPoolManager
 ) {
+    val isLoaded = soundPoolManager.isLoaded
+
     suspend fun playSequence(
         notes: List<Note>,
         delayMs: Long = 500L,

@@ -25,7 +25,8 @@ data class PracticeUiState(
     val detectedNote: Note? = null,
     val detectedFrequency: Float = 0f,
     val isStablePitch: Boolean = false,
-    val inputVolume: Float = 0f
+    val inputVolume: Float = 0f,
+    val isAudioLoaded: Boolean = false
 )
 
 @HiltViewModel
@@ -36,6 +37,14 @@ class PracticeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PracticeUiState())
     val uiState: StateFlow<PracticeUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            notePlayer.isLoaded.collect { loaded ->
+                _uiState.update { it.copy(isAudioLoaded = loaded) }
+            }
+        }
+    }
 
     fun init(rootNote: Note, conceptType: ConceptType) {
         val notes = TheoryEngine.generateNotes(rootNote, conceptType)
@@ -49,7 +58,7 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun playSequence() {
-        if (_uiState.value.isPlaying || _uiState.value.isListening) return
+        if (_uiState.value.isPlaying || _uiState.value.isListening || !_uiState.value.isAudioLoaded) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isPlaying = true) }
