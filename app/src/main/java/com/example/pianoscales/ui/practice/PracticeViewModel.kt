@@ -26,7 +26,8 @@ data class PracticeUiState(
     val detectedFrequency: Float = 0f,
     val isStablePitch: Boolean = false,
     val inputVolume: Float = 0f,
-    val isAudioLoaded: Boolean = false
+    val isAudioLoaded: Boolean = false,
+    val completedNotes: Set<Note> = emptySet()
 )
 
 @HiltViewModel
@@ -52,7 +53,8 @@ class PracticeViewModel @Inject constructor(
             it.copy(
                 rootNote = rootNote,
                 conceptType = conceptType,
-                generatedNotes = notes
+                generatedNotes = notes,
+                completedNotes = emptySet()
             )
         }
     }
@@ -94,16 +96,27 @@ class PracticeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             pitchDetector.startListening { note, frequency, volume, isStable ->
-                _uiState.update { 
-                    it.copy(
+                _uiState.update { currentState ->
+                    val newCompletedNotes = if (isStable && note != null && currentState.generatedNotes.contains(note)) {
+                        currentState.completedNotes + note
+                    } else {
+                        currentState.completedNotes
+                    }
+
+                    currentState.copy(
                         detectedNote = note,
                         detectedFrequency = if (note != null) frequency else 0f,
                         inputVolume = volume,
-                        isStablePitch = isStable
-                    ) 
+                        isStablePitch = isStable,
+                        completedNotes = newCompletedNotes
+                    )
                 }
             }
         }
+    }
+
+    fun resetProgress() {
+        _uiState.update { it.copy(completedNotes = emptySet()) }
     }
 
     private fun stopListening() {

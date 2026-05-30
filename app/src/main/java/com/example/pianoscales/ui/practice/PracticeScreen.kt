@@ -4,18 +4,24 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -70,19 +76,34 @@ fun PracticeScreen(
         ) {
             Text(
                 text = "Notes to practice:",
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.outline
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                uiState.generatedNotes.forEach { note ->
+                items(uiState.generatedNotes) { note ->
                     NoteBubble(
                         note = note,
-                        isActive = uiState.currentPlayingNote == note
+                        isPlaying = uiState.currentPlayingNote == note,
+                        isCompleted = uiState.completedNotes.contains(note),
+                        isDetected = uiState.isStablePitch && uiState.detectedNote == note
                     )
                 }
             }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            PracticeProgressBar(
+                current = uiState.completedNotes.size,
+                total = uiState.generatedNotes.size
+            )
+            
             Spacer(modifier = Modifier.height(32.dp))
             
             if (uiState.isListening) {
@@ -124,6 +145,68 @@ fun PracticeScreen(
             ) {
                 Text(if (uiState.isListening) "Stop Listening" else "Start Listening")
             }
+
+            if (uiState.completedNotes.isNotEmpty()) {
+                TextButton(
+                    onClick = { viewModel.resetProgress() },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Reset Progress")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PracticeProgressBar(current: Int, total: Int) {
+    if (total == 0) return
+    val progress = current.toFloat() / total.toFloat()
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "ProgressBar"
+    )
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = "Progress",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "$current / $total Notes",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { animatedProgress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .clip(RoundedCornerShape(6.dp)),
+            color = if (progress >= 1f) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+        if (progress >= 1f) {
+            Text(
+                text = "Scale Complete! 🎉",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color(0xFF4CAF50),
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .align(Alignment.CenterHorizontally),
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -203,30 +286,76 @@ fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float, isStable: Boolean
 }
 
 @Composable
-fun NoteBubble(note: Note, isActive: Boolean) {
-    val containerColor = if (isActive) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.primaryContainer
-    }
-    val contentColor = if (isActive) {
-        MaterialTheme.colorScheme.onPrimary
-    } else {
-        MaterialTheme.colorScheme.onPrimaryContainer
+fun NoteBubble(
+    note: Note,
+    isPlaying: Boolean,
+    isCompleted: Boolean,
+    isDetected: Boolean
+) {
+    val targetContainerColor = when {
+        isCompleted -> Color(0xFF4CAF50) // Material Green 500
+        isPlaying -> MaterialTheme.colorScheme.primary
+        isDetected -> MaterialTheme.colorScheme.secondaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
     }
 
+    val targetContentColor = when {
+        isCompleted || isPlaying -> Color.White
+        isDetected -> MaterialTheme.colorScheme.onSecondaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val containerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        animationSpec = tween(durationMillis = 300),
+        label = "ContainerColor"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = targetContentColor,
+        animationSpec = tween(durationMillis = 300),
+        label = "ContentColor"
+    )
+
+    val scale by animateFloatAsState(
+        targetValue = if (isDetected || isPlaying) 1.15f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "Scale"
+    )
+
     Surface(
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(16.dp),
         color = containerColor,
         contentColor = contentColor,
-        modifier = Modifier.size(48.dp),
-        shadowElevation = if (isActive) 8.dp else 2.dp
+        modifier = Modifier
+            .size(width = 64.dp, height = 80.dp)
+            .scale(scale)
+            .then(
+                if (isDetected) Modifier.border(
+                    width = 2.dp,
+                    color = MaterialTheme.colorScheme.secondary,
+                    shape = RoundedCornerShape(16.dp)
+                ) else Modifier
+            ),
+        shadowElevation = if (isPlaying || isDetected) 8.dp else 2.dp
     ) {
-        Box(contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
             Text(
                 text = note.displayName,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
             )
+            AnimatedVisibility(visible = isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Completed",
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.White
+                )
+            }
         }
     }
 }
