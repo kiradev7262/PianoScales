@@ -8,6 +8,8 @@ import com.example.pianoscales.domain.progress.ProgressRepository
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.theory.TheoryExplanation
+import com.example.pianoscales.theory.fingering.FingeringGuide
+import com.example.pianoscales.theory.fingering.Hand
 import com.example.pianoscales.theory.generators.TheoryEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,12 +33,17 @@ data class PracticeUiState(
     val isAudioLoaded: Boolean = false,
     val completedNotes: Set<Note> = emptySet(),
     val includeOctave: Boolean = true,
+    val selectedHand: Hand = Hand.RIGHT,
     val theoryExplanation: TheoryExplanation? = null,
     val isTheoryExpanded: Boolean = false,
     val guidedPractice: GuidedPracticeState = GuidedPracticeState(),
     val isLessonAlreadyCompleted: Boolean = false,
     val showFirstTimeCompletion: Boolean = false
-)
+) {
+    fun getCurrentFingeringGuide(): FingeringGuide? {
+        return theoryExplanation?.fingeringGuides?.find { it.hand == selectedHand }
+    }
+}
 
 @HiltViewModel
 class PracticeViewModel @Inject constructor(
@@ -88,6 +95,19 @@ class PracticeViewModel @Inject constructor(
                 completedNotes = emptySet(),
                 theoryExplanation = theory,
                 guidedPractice = GuidedPracticeState() // Reset guided practice
+            )
+        }
+    }
+
+    fun toggleHand(hand: Hand) {
+        _uiState.update { 
+            it.copy(
+                selectedHand = hand,
+                guidedPractice = it.guidedPractice.copy(
+                    targetFinger = it.theoryExplanation?.fingeringGuides
+                        ?.find { guide -> guide.hand == hand }
+                        ?.steps?.getOrNull(it.guidedPractice.currentIndex)?.finger
+                )
             )
         }
     }
@@ -153,12 +173,15 @@ class PracticeViewModel @Inject constructor(
                                         // Correct note
                                         val nextIndex = currentState.guidedPractice.currentIndex + 1
                                         val isCompleted = nextIndex >= currentState.generatedNotes.size
+                                        val fingeringGuide = currentState.getCurrentFingeringGuide()
+                                        
                                         newGuidedPractice = currentState.guidedPractice.copy(
                                             currentIndex = nextIndex,
                                             targetNote = if (isCompleted) null else currentState.generatedNotes.getOrNull(nextIndex),
+                                            targetFinger = if (isCompleted) null else fingeringGuide?.steps?.getOrNull(nextIndex)?.finger,
                                             completedNotes = currentState.guidedPractice.completedNotes + currentState.guidedPractice.currentIndex,
                                             lessonCompleted = isCompleted,
-                                            lastResult = PracticeResult.Correct,
+                                            lastResult = PracticeResult.Correct(fingeringGuide?.steps?.getOrNull(currentState.guidedPractice.currentIndex)?.finger),
                                             lastEvaluatedNote = note
                                         )
                                         
@@ -200,11 +223,13 @@ class PracticeViewModel @Inject constructor(
     fun startGuidedPractice() {
         _uiState.update { 
             if (it.generatedNotes.isEmpty()) return@update it
+            val fingeringGuide = it.getCurrentFingeringGuide()
             it.copy(
                 guidedPractice = GuidedPracticeState(
                     isRunning = true,
                     currentIndex = 0,
                     targetNote = it.generatedNotes[0],
+                    targetFinger = fingeringGuide?.steps?.getOrNull(0)?.finger,
                     completedNotes = emptySet(),
                     lessonCompleted = false,
                     lastResult = null,

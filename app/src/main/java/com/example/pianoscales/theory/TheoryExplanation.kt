@@ -1,12 +1,16 @@
 package com.example.pianoscales.theory
 
+import com.example.pianoscales.theory.fingering.FingeringGuide
+
 data class TheoryExplanation(
     val title: String,
     val formula: String,
     val formulaMeaning: Map<String, String>,
     val constructionSteps: List<ConstructionStep>,
     val scaleDegrees: List<ScaleDegreeInfo>,
-    val generalExplanation: String
+    val generalExplanation: String,
+    val fingeringGuides: List<FingeringGuide> = emptyList(),
+    val fingeringExplanation: String = ""
 )
 
 data class ConstructionStep(

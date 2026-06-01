@@ -1,6 +1,9 @@
 package com.example.pianoscales.theory.generators
 
 import com.example.pianoscales.theory.*
+import com.example.pianoscales.theory.fingering.FingeringEngine
+import com.example.pianoscales.theory.fingering.FingeringGuide
+import com.example.pianoscales.theory.fingering.Hand
 
 object TheoryEngine {
 
@@ -45,14 +48,38 @@ object TheoryEngine {
     fun generateTheory(root: Note, type: ConceptType, includeOctave: Boolean): TheoryExplanation {
         val notes = generateNotes(root, type, includeOctave)
         
+        val fingeringGuides = listOf(
+            FingeringEngine.generateFingering(notes, root, type, Hand.RIGHT),
+            FingeringEngine.generateFingering(notes, root, type, Hand.LEFT)
+        )
+
+        val fingeringExplanation = when (type.category) {
+            ConceptCategory.SCALE -> {
+                "Correct fingering is essential for smooth scale playing. Notice how the thumb crosses under (RH) or fingers cross over (LH) to allow for continuous movement."
+            }
+            ConceptCategory.CHORD -> {
+                "Standard triad fingering uses fingers 1, 3, and 5 for a stable and comfortable hand position."
+            }
+            ConceptCategory.ARPEGGIO -> {
+                "Arpeggios require wider hand stretches. Using the recommended fingers helps in reaching the notes efficiently without strain."
+            }
+        }
+
         return when (type.category) {
-            ConceptCategory.SCALE -> generateScaleTheory(root, type, notes, includeOctave)
-            ConceptCategory.CHORD -> generateChordTheory(root, type, notes)
-            ConceptCategory.ARPEGGIO -> generateArpeggioTheory(root, type, notes)
+            ConceptCategory.SCALE -> generateScaleTheory(root, type, notes, includeOctave, fingeringGuides, fingeringExplanation)
+            ConceptCategory.CHORD -> generateChordTheory(root, type, notes, fingeringGuides, fingeringExplanation)
+            ConceptCategory.ARPEGGIO -> generateArpeggioTheory(root, type, notes, fingeringGuides, fingeringExplanation)
         }
     }
 
-    private fun generateScaleTheory(root: Note, type: ConceptType, notes: List<Note>, includeOctave: Boolean): TheoryExplanation {
+    private fun generateScaleTheory(
+        root: Note, 
+        type: ConceptType, 
+        notes: List<Note>, 
+        includeOctave: Boolean,
+        fingeringGuides: List<FingeringGuide>,
+        fingeringExplanation: String
+    ): TheoryExplanation {
         val intervals = when (type) {
             ConceptType.MAJOR_SCALE -> listOf(2, 2, 1, 2, 2, 2, 1)
             ConceptType.NATURAL_MINOR_SCALE -> listOf(2, 1, 2, 2, 1, 2, 2)
@@ -88,11 +115,19 @@ object TheoryEngine {
                 "The Major Scale is the foundation of Western music, known for its bright and happy sound."
             } else {
                 "The Natural Minor Scale has a darker, more somber character compared to the Major Scale."
-            }
+            },
+            fingeringGuides = fingeringGuides,
+            fingeringExplanation = fingeringExplanation
         )
     }
 
-    private fun generateChordTheory(root: Note, type: ConceptType, notes: List<Note>): TheoryExplanation {
+    private fun generateChordTheory(
+        root: Note, 
+        type: ConceptType, 
+        notes: List<Note>,
+        fingeringGuides: List<FingeringGuide>,
+        fingeringExplanation: String
+    ): TheoryExplanation {
         val isMajor = type == ConceptType.MAJOR_CHORD
         val formula = if (isMajor) "1 - 3 - 5" else "1 - ♭3 - 5"
         val formulaMeaning = mapOf(
@@ -122,11 +157,19 @@ object TheoryEngine {
                 "Major chords contain a major third interval, creating a bright and stable sound."
             } else {
                 "Minor chords contain a minor third interval, creating a darker, more emotional sound."
-            }
+            },
+            fingeringGuides = fingeringGuides,
+            fingeringExplanation = fingeringExplanation
         )
     }
 
-    private fun generateArpeggioTheory(root: Note, type: ConceptType, notes: List<Note>): TheoryExplanation {
+    private fun generateArpeggioTheory(
+        root: Note, 
+        type: ConceptType, 
+        notes: List<Note>,
+        fingeringGuides: List<FingeringGuide>,
+        fingeringExplanation: String
+    ): TheoryExplanation {
         val isMajor = type == ConceptType.MAJOR_ARPEGGIO
         val formula = if (isMajor) "1 - 3 - 5 - 8" else "1 - ♭3 - 5 - 8"
         val formulaMeaning = mapOf(
@@ -160,7 +203,9 @@ object TheoryEngine {
             formulaMeaning = formulaMeaning,
             constructionSteps = constructionSteps,
             scaleDegrees = scaleDegrees,
-            generalExplanation = "An arpeggio is a chord played one note at a time rather than simultaneously."
+            generalExplanation = "An arpeggio is a chord played one note at a time rather than simultaneously.",
+            fingeringGuides = fingeringGuides,
+            fingeringExplanation = fingeringExplanation
         )
     }
 }

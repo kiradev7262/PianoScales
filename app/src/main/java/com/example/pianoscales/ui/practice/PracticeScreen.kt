@@ -38,6 +38,8 @@ import com.example.pianoscales.theory.ConceptCategory
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.theory.TheoryExplanation
+import com.example.pianoscales.theory.fingering.FingerInfo
+import com.example.pianoscales.theory.fingering.Hand
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,6 +121,8 @@ fun PracticeScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             
+            val fingeringGuide = uiState.getCurrentFingeringGuide()
+
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp),
@@ -129,6 +133,7 @@ fun PracticeScreen(
                     val note = uiState.generatedNotes[index]
                     NoteBubble(
                         note = note,
+                        fingerNumber = fingeringGuide?.steps?.getOrNull(index)?.finger?.number,
                         isPlaying = uiState.currentPlayingNote == note,
                         isCompleted = if (uiState.guidedPractice.isRunning) {
                             uiState.guidedPractice.completedNotes.contains(index)
@@ -140,6 +145,16 @@ fun PracticeScreen(
                     )
                 }
             }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            HandSelector(
+                selectedHand = uiState.selectedHand,
+                onHandSelected = { viewModel.toggleHand(it) }
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            FingerLegendCard()
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -307,12 +322,29 @@ fun GuidedPracticeCard(
                                 modifier = Modifier.size(80.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = state.targetNote?.displayName ?: "--",
-                                        style = MaterialTheme.typography.displayMedium,
-                                        color = Color.White
-                                    )
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = state.targetNote?.displayName ?: "--",
+                                            style = MaterialTheme.typography.displayMedium,
+                                            color = Color.White
+                                        )
+                                        state.targetFinger?.let {
+                                            Text(
+                                                text = "Finger ${it.number}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.White.copy(alpha = 0.8f)
+                                            )
+                                        }
+                                    }
                                 }
+                            }
+                            state.targetFinger?.let {
+                                Text(
+                                    text = it.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
                             IconButton(onClick = onPlayTarget) {
                                 Icon(Icons.Default.PlayArrow, contentDescription = "Play Target", tint = MaterialTheme.colorScheme.primary)
@@ -338,6 +370,9 @@ fun GuidedPracticeCard(
                             when (val result = state.lastResult) {
                                 is PracticeResult.Correct -> {
                                     Text("✅ Correct!", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                                    result.expectedFinger?.let {
+                                        Text("Expected Finger: ${it.number} (${it.name})", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
+                                    }
                                 }
                                 is PracticeResult.Incorrect -> {
                                     Text("❌ Try Again", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
@@ -483,6 +518,61 @@ fun TheoryPanel(
                             }
                         }
                     }
+
+                    if (theory.fingeringGuides.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text("Recommended Fingering", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = theory.fingeringExplanation,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        theory.fingeringGuides.forEach { guide ->
+                            Column(modifier = Modifier.padding(bottom = 12.dp)) {
+                                Text(
+                                    text = guide.hand.displayName,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    guide.steps.forEach { step ->
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(step.note.displayName, style = MaterialTheme.typography.labelSmall)
+                                            Text(
+                                                text = step.finger.number.toString(),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = "Why Fingering Matters",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Correct fingering creates efficient hand movement, builds muscle memory, improves speed, and helps you play fluently. Learning proper fingering from the beginning prevents bad habits later.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -617,6 +707,7 @@ fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float, isStable: Boolean
 @Composable
 fun NoteBubble(
     note: Note,
+    fingerNumber: Int? = null,
     isPlaying: Boolean,
     isCompleted: Boolean,
     isDetected: Boolean,
@@ -688,6 +779,14 @@ fun NoteBubble(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
+            fingerNumber?.let { 
+                Text(
+                    text = "($it)",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isPlaying || isCompleted) Color.White else MaterialTheme.colorScheme.primary
+                )
+            }
             AnimatedVisibility(visible = isCompleted) {
                 Icon(
                     imageVector = Icons.Default.Check,
