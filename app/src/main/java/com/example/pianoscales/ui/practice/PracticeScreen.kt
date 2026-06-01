@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -111,12 +112,18 @@ fun PracticeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                items(uiState.generatedNotes) { note ->
+                items(uiState.generatedNotes.indices.toList()) { index ->
+                    val note = uiState.generatedNotes[index]
                     NoteBubble(
                         note = note,
                         isPlaying = uiState.currentPlayingNote == note,
-                        isCompleted = uiState.completedNotes.contains(note),
-                        isDetected = uiState.isStablePitch && uiState.detectedNote == note
+                        isCompleted = if (uiState.guidedPractice.isRunning) {
+                            uiState.guidedPractice.completedNotes.contains(index)
+                        } else {
+                            uiState.completedNotes.contains(note)
+                        },
+                        isDetected = uiState.isStablePitch && uiState.detectedNote == note,
+                        isTarget = uiState.guidedPractice.isRunning && uiState.guidedPractice.currentIndex == index
                     )
                 }
             }
@@ -170,7 +177,7 @@ fun PracticeScreen(
                 Text(if (uiState.isListening) "Stop Listening" else "Start Listening")
             }
 
-            if (uiState.completedNotes.isNotEmpty()) {
+            if (uiState.completedNotes.isNotEmpty() && !uiState.guidedPractice.isRunning) {
                 TextButton(
                     onClick = { viewModel.resetProgress() },
                     modifier = Modifier.padding(top = 8.dp)
@@ -180,6 +187,16 @@ fun PracticeScreen(
                     Text("Reset Progress")
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            GuidedPracticeCard(
+                state = uiState.guidedPractice,
+                totalNotes = uiState.generatedNotes.size,
+                onStart = { viewModel.startGuidedPractice() },
+                onReset = { viewModel.resetGuidedPractice() },
+                onPlayTarget = { viewModel.playTargetNote() }
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
             HorizontalDivider()
@@ -191,6 +208,126 @@ fun PracticeScreen(
                     isExpanded = uiState.isTheoryExpanded,
                     onToggleExpansion = { viewModel.toggleTheoryExpansion() }
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun GuidedPracticeCard(
+    state: GuidedPracticeState,
+    totalNotes: Int,
+    onStart: () -> Unit,
+    onReset: () -> Unit,
+    onPlayTarget: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (state.isRunning) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
+            else MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = if (state.isRunning) BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary) else null
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Guided Practice",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (!state.isRunning) {
+                Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Start Guided Lesson")
+                }
+            } else {
+                if (state.lessonCompleted) {
+                    Text(
+                        text = "🎉 Lesson Complete!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "$totalNotes / $totalNotes Notes Correct",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Restart Lesson")
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("TARGET NOTE", style = MaterialTheme.typography.labelSmall)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(80.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = state.targetNote?.displayName ?: "--",
+                                        style = MaterialTheme.typography.displayMedium,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                            IconButton(onClick = onPlayTarget) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Play Target", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.weight(1f).padding(start = 16.dp)
+                        ) {
+                            Text(
+                                text = "${state.currentIndex} / $totalNotes",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            LinearProgressIndicator(
+                                progress = { state.currentIndex.toFloat() / totalNotes },
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape)
+                            )
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            when (val result = state.lastResult) {
+                                is PracticeResult.Correct -> {
+                                    Text("✅ Correct!", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                                }
+                                is PracticeResult.Incorrect -> {
+                                    Text("❌ Try Again", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                    Text("Expected ${result.expected.displayName}, detected ${result.detected.displayName}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                null -> {
+                                    Text("Play the note above", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
+                        Text("Reset Lesson")
+                    }
+                }
             }
         }
     }
@@ -455,9 +592,11 @@ fun NoteBubble(
     note: Note,
     isPlaying: Boolean,
     isCompleted: Boolean,
-    isDetected: Boolean
+    isDetected: Boolean,
+    isTarget: Boolean = false
 ) {
     val targetContainerColor = when {
+        isTarget -> MaterialTheme.colorScheme.primaryContainer
         isCompleted -> Color(0xFF4CAF50) // Material Green 500
         isPlaying -> MaterialTheme.colorScheme.primary
         isDetected -> MaterialTheme.colorScheme.secondaryContainer
@@ -465,6 +604,7 @@ fun NoteBubble(
     }
 
     val targetContentColor = when {
+        isTarget -> MaterialTheme.colorScheme.onPrimaryContainer
         isCompleted || isPlaying -> Color.White
         isDetected -> MaterialTheme.colorScheme.onSecondaryContainer
         else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -482,7 +622,7 @@ fun NoteBubble(
     )
 
     val scale by animateFloatAsState(
-        targetValue = if (isDetected || isPlaying) 1.15f else 1f,
+        targetValue = if (isDetected || isPlaying || isTarget) 1.15f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "Scale"
     )
@@ -495,19 +635,27 @@ fun NoteBubble(
             .size(width = 64.dp, height = 80.dp)
             .scale(scale)
             .then(
-                if (isDetected) Modifier.border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.secondary,
+                if (isDetected || isTarget) Modifier.border(
+                    width = if (isTarget) 3.dp else 2.dp,
+                    color = if (isTarget) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                     shape = RoundedCornerShape(16.dp)
                 ) else Modifier
             ),
-        shadowElevation = if (isPlaying || isDetected) 8.dp else 2.dp
+        shadowElevation = if (isPlaying || isDetected || isTarget) 8.dp else 2.dp
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxSize()
         ) {
+            if (isTarget && !isCompleted) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
             Text(
                 text = note.displayName,
                 style = MaterialTheme.typography.titleLarge,

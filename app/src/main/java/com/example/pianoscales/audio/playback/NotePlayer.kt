@@ -18,8 +18,12 @@ class NotePlayer @Inject constructor(
     ) {
         notes.forEach { note ->
             onNoteStarted(note)
-            soundPoolManager.playNote(note)
+            playNote(note)
             delay(delayMs)
         }
+    }
+
+    fun playNote(note: Note) {
+        soundPoolManager.playNote(note)
     }
 }

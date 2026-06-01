@@ -31,7 +31,8 @@ data class PracticeUiState(
     val completedNotes: Set<Note> = emptySet(),
     val includeOctave: Boolean = true,
     val theoryExplanation: TheoryExplanation? = null,
-    val isTheoryExpanded: Boolean = false
+    val isTheoryExpanded: Boolean = false,
+    val guidedPractice: GuidedPracticeState = GuidedPracticeState()
 )
 
 @HiltViewModel
@@ -59,7 +60,8 @@ class PracticeViewModel @Inject constructor(
                 conceptType = conceptType,
                 generatedNotes = TheoryEngine.generateNotes(rootNote, conceptType, it.includeOctave),
                 completedNotes = emptySet(),
-                theoryExplanation = theory
+                theoryExplanation = theory,
+                guidedPractice = GuidedPracticeState() // Reset guided practice on init
             )
         }
     }
@@ -72,7 +74,8 @@ class PracticeViewModel @Inject constructor(
                 includeOctave = newIncludeOctave,
                 generatedNotes = TheoryEngine.generateNotes(it.rootNote, it.conceptType, newIncludeOctave),
                 completedNotes = emptySet(),
-                theoryExplanation = theory
+                theoryExplanation = theory,
+                guidedPractice = GuidedPracticeState() // Reset guided practice
             )
         }
     }
@@ -119,10 +122,42 @@ class PracticeViewModel @Inject constructor(
         viewModelScope.launch {
             pitchDetector.startListening { note, frequency, volume, isStable ->
                 _uiState.update { currentState ->
-                    val newCompletedNotes = if (isStable && note != null && currentState.generatedNotes.contains(note)) {
-                        currentState.completedNotes + note
-                    } else {
-                        currentState.completedNotes
+                    var newCompletedNotes = currentState.completedNotes
+                    var newGuidedPractice = currentState.guidedPractice
+
+                    if (isStable && note != null) {
+                        // Regular practice highlighting
+                        if (currentState.generatedNotes.contains(note)) {
+                            newCompletedNotes = currentState.completedNotes + note
+                        }
+
+                        // Guided practice logic
+                        if (currentState.guidedPractice.isRunning && !currentState.guidedPractice.lessonCompleted) {
+                            val target = currentState.guidedPractice.targetNote
+                            if (target != null) {
+                                if (note == target) {
+                                    // Correct note
+                                    val nextIndex = currentState.guidedPractice.currentIndex + 1
+                                    val isCompleted = nextIndex >= currentState.generatedNotes.size
+                                    newGuidedPractice = currentState.guidedPractice.copy(
+                                        currentIndex = nextIndex,
+                                        targetNote = if (isCompleted) null else currentState.generatedNotes.getOrNull(nextIndex),
+                                        completedNotes = currentState.guidedPractice.completedNotes + currentState.guidedPractice.currentIndex,
+                                        lessonCompleted = isCompleted,
+                                        lastResult = PracticeResult.Correct
+                                    )
+                                    
+                                    if (isCompleted) {
+                                        onLessonCompleted(currentState.rootNote, currentState.conceptType)
+                                    }
+                                } else {
+                                    // Incorrect note - only update if it's a different note than target
+                                    newGuidedPractice = currentState.guidedPractice.copy(
+                                        lastResult = PracticeResult.Incorrect(target, note)
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     currentState.copy(
@@ -130,11 +165,54 @@ class PracticeViewModel @Inject constructor(
                         detectedFrequency = if (note != null) frequency else 0f,
                         inputVolume = volume,
                         isStablePitch = isStable,
-                        completedNotes = newCompletedNotes
+                        completedNotes = newCompletedNotes,
+                        guidedPractice = newGuidedPractice
                     )
                 }
             }
         }
+    }
+
+    fun startGuidedPractice() {
+        _uiState.update { 
+            if (it.generatedNotes.isEmpty()) return@update it
+            it.copy(
+                guidedPractice = GuidedPracticeState(
+                    isRunning = true,
+                    currentIndex = 0,
+                    targetNote = it.generatedNotes[0],
+                    completedNotes = emptySet(),
+                    lessonCompleted = false,
+                    lastResult = null
+                )
+            )
+        }
+        // Auto-start listening if not already
+        if (!_uiState.value.isListening) {
+            startListening()
+        }
+    }
+
+    fun stopGuidedPractice() {
+        _uiState.update { 
+            it.copy(guidedPractice = it.guidedPractice.copy(isRunning = false))
+        }
+    }
+
+    fun resetGuidedPractice() {
+        startGuidedPractice()
+    }
+
+    fun playTargetNote() {
+        val target = _uiState.value.guidedPractice.targetNote
+        if (target != null) {
+            notePlayer.playNote(target)
+        }
+    }
+
+    private fun onLessonCompleted(rootNote: Note, conceptType: ConceptType) {
+        // Hook for future persistence
+        android.util.Log.d("GuidedPractice", "Lesson Completed: $rootNote $conceptType")
     }
 
     fun resetProgress() {
