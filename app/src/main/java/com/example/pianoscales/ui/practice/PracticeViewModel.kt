@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pianoscales.audio.pitch.PitchDetector
 import com.example.pianoscales.audio.playback.NotePlayer
+import com.example.pianoscales.domain.progress.ProgressRepository
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.theory.TheoryExplanation
@@ -32,13 +33,16 @@ data class PracticeUiState(
     val includeOctave: Boolean = true,
     val theoryExplanation: TheoryExplanation? = null,
     val isTheoryExpanded: Boolean = false,
-    val guidedPractice: GuidedPracticeState = GuidedPracticeState()
+    val guidedPractice: GuidedPracticeState = GuidedPracticeState(),
+    val isLessonAlreadyCompleted: Boolean = false,
+    val showFirstTimeCompletion: Boolean = false
 )
 
 @HiltViewModel
 class PracticeViewModel @Inject constructor(
     private val notePlayer: NotePlayer,
-    private val pitchDetector: PitchDetector
+    private val pitchDetector: PitchDetector,
+    private val progressRepository: ProgressRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PracticeUiState())
@@ -63,6 +67,14 @@ class PracticeViewModel @Inject constructor(
                 theoryExplanation = theory,
                 guidedPractice = GuidedPracticeState() // Reset guided practice on init
             )
+        }
+        
+        // Load completion status
+        viewModelScope.launch {
+            progressRepository.getAllProgress().collect { allProgress ->
+                val completed = allProgress.any { it.rootNote == rootNote && it.conceptType == conceptType && it.completed }
+                _uiState.update { it.copy(isLessonAlreadyCompleted = completed) }
+            }
         }
     }
 
@@ -224,8 +236,18 @@ class PracticeViewModel @Inject constructor(
     }
 
     private fun onLessonCompleted(rootNote: Note, conceptType: ConceptType) {
-        // Hook for future persistence
+        val wasAlreadyCompleted = _uiState.value.isLessonAlreadyCompleted
+        viewModelScope.launch {
+            progressRepository.saveProgress(rootNote, conceptType, true)
+            if (!wasAlreadyCompleted) {
+                _uiState.update { it.copy(showFirstTimeCompletion = true) }
+            }
+        }
         android.util.Log.d("GuidedPractice", "Lesson Completed: $rootNote $conceptType")
+    }
+
+    fun dismissCompletionDialog() {
+        _uiState.update { it.copy(showFirstTimeCompletion = false) }
     }
 
     fun resetProgress() {

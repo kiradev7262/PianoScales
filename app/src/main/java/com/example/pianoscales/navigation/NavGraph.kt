@@ -30,8 +30,8 @@ fun NavGraph(navController: NavHostController) {
     ) {
         composable(Screen.NoteSelector.route) {
             NoteSelectorScreen { note ->
-            navController.navigate(Screen.ConceptSelector.createRoute(note))
-        }
+                navController.navigate(Screen.ConceptSelector.createRoute(note))
+            }
         }
         composable(
             route = Screen.ConceptSelector.route,

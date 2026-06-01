@@ -65,6 +65,10 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
+
     // TarsosDSP - official repository and modern version
     implementation("be.tarsos.dsp:core:2.5")
 

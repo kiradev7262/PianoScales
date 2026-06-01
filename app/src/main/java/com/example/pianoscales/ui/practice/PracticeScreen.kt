@@ -65,7 +65,20 @@ fun PracticeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("${rootNote.displayName} ${conceptType.displayName}") },
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${rootNote.displayName} ${conceptType.displayName}")
+                        if (uiState.isLessonAlreadyCompleted || uiState.guidedPractice.lessonCompleted) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Completed",
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -209,6 +222,20 @@ fun PracticeScreen(
                     onToggleExpansion = { viewModel.toggleTheoryExpansion() }
                 )
             }
+        }
+
+        if (uiState.showFirstTimeCompletion) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissCompletionDialog() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissCompletionDialog() }) {
+                        Text("Awesome!")
+                    }
+                },
+                title = { Text("🎉 Lesson Completed!") },
+                text = { Text("Great job! You've mastered the ${rootNote.displayName} ${conceptType.displayName}. Your progress has been saved.") },
+                icon = { Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700)) }
+            )
         }
     }
 }
