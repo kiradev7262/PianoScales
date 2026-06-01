@@ -6,6 +6,7 @@ import com.example.pianoscales.audio.pitch.PitchDetector
 import com.example.pianoscales.audio.playback.NotePlayer
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.theory.TheoryExplanation
 import com.example.pianoscales.theory.generators.TheoryEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +28,10 @@ data class PracticeUiState(
     val isStablePitch: Boolean = false,
     val inputVolume: Float = 0f,
     val isAudioLoaded: Boolean = false,
-    val completedNotes: Set<Note> = emptySet()
+    val completedNotes: Set<Note> = emptySet(),
+    val includeOctave: Boolean = true,
+    val theoryExplanation: TheoryExplanation? = null,
+    val isTheoryExpanded: Boolean = false
 )
 
 @HiltViewModel
@@ -48,15 +52,33 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun init(rootNote: Note, conceptType: ConceptType) {
-        val notes = TheoryEngine.generateNotes(rootNote, conceptType)
         _uiState.update { 
+            val theory = TheoryEngine.generateTheory(rootNote, conceptType, it.includeOctave)
             it.copy(
                 rootNote = rootNote,
                 conceptType = conceptType,
-                generatedNotes = notes,
-                completedNotes = emptySet()
+                generatedNotes = TheoryEngine.generateNotes(rootNote, conceptType, it.includeOctave),
+                completedNotes = emptySet(),
+                theoryExplanation = theory
             )
         }
+    }
+
+    fun toggleOctave() {
+        _uiState.update { 
+            val newIncludeOctave = !it.includeOctave
+            val theory = TheoryEngine.generateTheory(it.rootNote, it.conceptType, newIncludeOctave)
+            it.copy(
+                includeOctave = newIncludeOctave,
+                generatedNotes = TheoryEngine.generateNotes(it.rootNote, it.conceptType, newIncludeOctave),
+                completedNotes = emptySet(),
+                theoryExplanation = theory
+            )
+        }
+    }
+
+    fun toggleTheoryExpansion() {
+        _uiState.update { it.copy(isTheoryExpanded = !it.isTheoryExpanded) }
     }
 
     fun playSequence() {

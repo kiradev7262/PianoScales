@@ -7,15 +7,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,8 +33,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.pianoscales.theory.ConceptCategory
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.theory.TheoryExplanation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,10 +77,27 @@ fun PracticeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (conceptType.category == ConceptCategory.SCALE) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text("Include Octave Note", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = uiState.includeOctave,
+                        onCheckedChange = { viewModel.toggleOctave() },
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
+
             Text(
                 text = "Notes to practice:",
                 style = MaterialTheme.typography.titleMedium,
@@ -100,7 +124,7 @@ fun PracticeScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             PracticeProgressBar(
-                current = uiState.completedNotes.size,
+                current = uiState.generatedNotes.count { uiState.completedNotes.contains(it) },
                 total = uiState.generatedNotes.size
             )
             
@@ -154,6 +178,147 @@ fun PracticeScreen(
                     Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Reset Progress")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            uiState.theoryExplanation?.let { theory ->
+                TheoryPanel(
+                    theory = theory,
+                    isExpanded = uiState.isTheoryExpanded,
+                    onToggleExpansion = { viewModel.toggleTheoryExpansion() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TheoryPanel(
+    theory: TheoryExplanation,
+    isExpanded: Boolean,
+    onToggleExpansion: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleExpansion() },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Theory Explanation",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.Close else Icons.Default.Menu,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand"
+                )
+            }
+
+            AnimatedVisibility(visible = isExpanded) {
+                Column(modifier = Modifier.padding(top = 16.dp)) {
+                    Text(
+                        text = theory.generalExplanation,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text("Formula", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = theory.formula,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    
+                    theory.formulaMeaning.forEach { (key, value) ->
+                        Text(
+                            text = "$key = $value",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Construction", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                            .padding(12.dp)
+                    ) {
+                        Text("Start at ${theory.title.split(" ")[0]}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        theory.constructionSteps.forEach { step ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = step.interval,
+                                    modifier = Modifier.width(40.dp),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+                                Text(
+                                    text = step.resultNote.displayName,
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Scale Degrees", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        theory.scaleDegrees.forEach { degreeInfo ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(degreeInfo.degree, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Text(
+                                        text = degreeInfo.note.displayName,
+                                        modifier = Modifier.padding(start = 8.dp),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                Text(
+                                    text = degreeInfo.name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
