@@ -133,30 +133,42 @@ class PracticeViewModel @Inject constructor(
 
                         // Guided practice logic
                         if (currentState.guidedPractice.isRunning && !currentState.guidedPractice.lessonCompleted) {
-                            val target = currentState.guidedPractice.targetNote
-                            if (target != null) {
-                                if (note == target) {
-                                    // Correct note
-                                    val nextIndex = currentState.guidedPractice.currentIndex + 1
-                                    val isCompleted = nextIndex >= currentState.generatedNotes.size
-                                    newGuidedPractice = currentState.guidedPractice.copy(
-                                        currentIndex = nextIndex,
-                                        targetNote = if (isCompleted) null else currentState.generatedNotes.getOrNull(nextIndex),
-                                        completedNotes = currentState.guidedPractice.completedNotes + currentState.guidedPractice.currentIndex,
-                                        lessonCompleted = isCompleted,
-                                        lastResult = PracticeResult.Correct
-                                    )
-                                    
-                                    if (isCompleted) {
-                                        onLessonCompleted(currentState.rootNote, currentState.conceptType)
+                            // Only evaluate if this is a new stable note detection
+                            if (note != currentState.guidedPractice.lastEvaluatedNote) {
+                                val target = currentState.guidedPractice.targetNote
+                                if (target != null) {
+                                    if (note == target) {
+                                        // Correct note
+                                        val nextIndex = currentState.guidedPractice.currentIndex + 1
+                                        val isCompleted = nextIndex >= currentState.generatedNotes.size
+                                        newGuidedPractice = currentState.guidedPractice.copy(
+                                            currentIndex = nextIndex,
+                                            targetNote = if (isCompleted) null else currentState.generatedNotes.getOrNull(nextIndex),
+                                            completedNotes = currentState.guidedPractice.completedNotes + currentState.guidedPractice.currentIndex,
+                                            lessonCompleted = isCompleted,
+                                            lastResult = PracticeResult.Correct,
+                                            lastEvaluatedNote = note
+                                        )
+                                        
+                                        if (isCompleted) {
+                                            onLessonCompleted(currentState.rootNote, currentState.conceptType)
+                                        }
+                                    } else {
+                                        // Incorrect note
+                                        newGuidedPractice = currentState.guidedPractice.copy(
+                                            lastResult = PracticeResult.Incorrect(target, note),
+                                            lastEvaluatedNote = note
+                                        )
                                     }
-                                } else {
-                                    // Incorrect note - only update if it's a different note than target
-                                    newGuidedPractice = currentState.guidedPractice.copy(
-                                        lastResult = PracticeResult.Incorrect(target, note)
-                                    )
                                 }
                             }
+                        }
+                    } else {
+                        // Clear evaluated note when not stable or no note detected
+                        if (currentState.guidedPractice.lastEvaluatedNote != null) {
+                            newGuidedPractice = currentState.guidedPractice.copy(
+                                lastEvaluatedNote = null
+                            )
                         }
                     }
 
@@ -183,7 +195,8 @@ class PracticeViewModel @Inject constructor(
                     targetNote = it.generatedNotes[0],
                     completedNotes = emptySet(),
                     lessonCompleted = false,
-                    lastResult = null
+                    lastResult = null,
+                    lastEvaluatedNote = null
                 )
             )
         }
