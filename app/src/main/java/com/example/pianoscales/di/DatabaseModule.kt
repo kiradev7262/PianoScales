@@ -22,11 +22,17 @@ object DatabaseModule {
             context,
             ProgressDatabase::class.java,
             "piano_scales_db"
-        ).build()
+        ).fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
     fun provideProgressDao(database: ProgressDatabase): ProgressDao {
         return database.progressDao()
+    }
+
+    @Provides
+    fun provideUserProfileDao(database: ProgressDatabase): com.example.pianoscales.data.local.UserProfileDao {
+        return database.userProfileDao()
     }
 }
