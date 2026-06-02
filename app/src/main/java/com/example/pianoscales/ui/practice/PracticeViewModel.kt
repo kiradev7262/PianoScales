@@ -245,12 +245,12 @@ class PracticeViewModel @Inject constructor(
 
     fun stopGuidedPractice() {
         _uiState.update { 
-            it.copy(guidedPractice = it.guidedPractice.copy(isRunning = false))
+            it.copy(guidedPractice = GuidedPracticeState(isRunning = false))
         }
     }
 
     fun resetGuidedPractice() {
-        startGuidedPractice()
+        stopGuidedPractice()
     }
 
     fun playTargetNote() {

@@ -6,12 +6,16 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -286,7 +290,7 @@ fun ActionButtonCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(32.dp)
             .clickable(enabled = enabled) { onClick() },
         shape = RoundedCornerShape(20.dp),
         color = if (enabled) containerColor else containerColor.copy(alpha = 0.5f)
@@ -294,9 +298,8 @@ fun ActionButtonCard(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = icon,
@@ -307,7 +310,7 @@ fun ActionButtonCard(
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = if (enabled) TextPrimary else TextPrimary.copy(alpha = 0.5f)
             )
@@ -321,6 +324,7 @@ fun GuidedPracticeCard(
     totalNotes: Int,
     onStart: () -> Unit,
     onReset: () -> Unit,
+    onCancel: () -> Unit,
     onPlayTarget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -330,17 +334,37 @@ fun GuidedPracticeCard(
         colors = CardDefaults.cardColors(containerColor = CardSurface),
         border = if (state.isRunning && !state.lessonCompleted) BorderStroke(2.dp, PrimaryAccent) else null
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "Guided Practice",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-            
-            Spacer(modifier = Modifier.height(20.dp))
+        Column(modifier = Modifier.padding(20.dp , 12.dp)) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Guided Practice",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                if(state.isRunning && !state.lessonCompleted){
+                    IconButton(
+                        onClick = onCancel
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cancel Guided Practice",
+                            tint = TextPrimary
+                        )
+                    }
+                }
+
+            }
+
 
             if (!state.isRunning) {
+                Spacer(modifier = Modifier.height(8.dp))
                 ActionButtonCard(
                     title = "Start Guided Lesson",
                     icon = Icons.Default.PlayArrow,
@@ -348,6 +372,7 @@ fun GuidedPracticeCard(
                     containerColor = PrimaryAccent,
                     contentColor = PrimaryBackground
                 )
+                Spacer(modifier = Modifier.height(4.dp))
             } else if (state.lessonCompleted) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -439,15 +464,7 @@ fun GuidedPracticeCard(
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                TextButton(
-                    onClick = onReset,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text("Cancel Lesson", color = TextMuted)
-                }
+
             }
         }
     }

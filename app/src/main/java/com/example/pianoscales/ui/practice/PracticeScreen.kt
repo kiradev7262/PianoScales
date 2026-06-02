@@ -154,6 +154,19 @@ fun PracticeTabContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+
+        if (uiState.isListening) {
+            VolumeMeter(amplitude = uiState.inputVolume)
+//            Spacer(modifier = Modifier.height(24.dp))
+//
+//            DetectedNoteDisplay(
+//                detectedNote = uiState.detectedNote,
+//                isStable = uiState.isStablePitch
+//            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -164,9 +177,42 @@ fun PracticeTabContent(
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
+            Spacer(modifier = Modifier.width(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ActionButtonCard(
+                    title = "Play",
+                    icon = Icons.Default.PlayArrow,
+                    onClick = { viewModel.playSequence() },
+                    modifier = Modifier.weight(1f),
+                    enabled = !uiState.isPlaying && !uiState.isListening
+                )
+
+                ActionButtonCard(
+                    title = if (uiState.isListening) "Stop" else "Listen",
+                    icon = if (uiState.isListening) Icons.Default.Close else Icons.Default.Info,
+                    onClick = {
+                        when (PackageManager.PERMISSION_GRANTED) {
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO
+                            ) -> {
+                                viewModel.toggleListening()
+                            }
+                            else -> {
+                                launcher.launch(Manifest.permission.RECORD_AUDIO)
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = !uiState.isPlaying,
+                    containerColor = if (uiState.isListening) SuccessAccent.copy(alpha = 0.2f) else CardSurface,
+                    contentColor = if (uiState.isListening) SuccessAccent else PrimaryAccent
+                )
+            }
+
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
         val fingeringGuide = uiState.getCurrentFingeringGuide()
 
@@ -209,9 +255,11 @@ fun PracticeTabContent(
             state = uiState.guidedPractice,
             totalNotes = uiState.generatedNotes.size,
             onStart = { viewModel.startGuidedPractice() },
-            onReset = { viewModel.resetGuidedPractice() },
+            onReset = { viewModel.startGuidedPractice() },
+            onCancel = { viewModel.stopGuidedPractice() },
             onPlayTarget = { viewModel.playTargetNote() }
         )
+
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -222,52 +270,6 @@ fun PracticeTabContent(
             detectedNote = if (uiState.isStablePitch) uiState.detectedNote else null,
             playingNote = uiState.currentPlayingNote
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (uiState.isListening) {
-            VolumeMeter(amplitude = uiState.inputVolume)
-//            Spacer(modifier = Modifier.height(24.dp))
-//
-//            DetectedNoteDisplay(
-//                detectedNote = uiState.detectedNote,
-//                isStable = uiState.isStablePitch
-//            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            ActionButtonCard(
-                title = "Play",
-                icon = Icons.Default.PlayArrow,
-                onClick = { viewModel.playSequence() },
-                modifier = Modifier.weight(1f),
-                enabled = !uiState.isPlaying && !uiState.isListening
-            )
-            
-            ActionButtonCard(
-                title = if (uiState.isListening) "Stop" else "Listen",
-                icon = if (uiState.isListening) Icons.Default.Close else Icons.Default.Info,
-                onClick = {
-                    when (PackageManager.PERMISSION_GRANTED) {
-                        ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO
-                        ) -> {
-                            viewModel.toggleListening()
-                        }
-                        else -> {
-                            launcher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    }
-                },
-                modifier = Modifier.weight(1f),
-                enabled = !uiState.isPlaying,
-                containerColor = if (uiState.isListening) SuccessAccent.copy(alpha = 0.2f) else CardSurface,
-                contentColor = if (uiState.isListening) SuccessAccent else PrimaryAccent
-            )
-        }
-
 
 
     }
@@ -415,7 +417,7 @@ fun TheoryTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
                         step.interval, 
                         modifier = Modifier.width(48.dp), 
                         fontWeight = FontWeight.Bold, 
-                        color = SecondaryAccent
+                        color = PrimaryAccent
                     )
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,
