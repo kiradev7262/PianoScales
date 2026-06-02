@@ -4,21 +4,16 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -28,24 +23,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.pianoscales.theory.ConceptCategory
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
-import com.example.pianoscales.theory.TheoryExplanation
-import com.example.pianoscales.theory.fingering.FingerInfo
-import com.example.pianoscales.theory.fingering.Hand
-import com.example.pianoscales.ui.components.LessonCard
-import com.example.pianoscales.ui.components.SectionHeader
-import com.example.pianoscales.ui.components.TheoryCard
-import com.example.pianoscales.ui.theme.PrimaryBackground
-import com.example.pianoscales.ui.theme.TextPrimary
+import com.example.pianoscales.ui.practice.components.*
+import com.example.pianoscales.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,19 +85,13 @@ fun PracticeScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
                 )
-                TabRow(
+                
+                PillTabRow(
+                    tabs = tabs,
                     selectedTabIndex = selectedTab,
-                    containerColor = PrimaryBackground,
-                    contentColor = MaterialTheme.colorScheme.primary
-                ) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            text = { Text(title) }
-                        )
-                    }
-                }
+                    onTabSelected = { selectedTab = it },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
         }
     ) { padding ->
@@ -121,24 +102,29 @@ fun PracticeScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            
             when (selectedTab) {
                 0 -> PracticeTabContent(uiState, viewModel, launcher)
                 1 -> LearnTabContent(uiState, viewModel)
                 2 -> TheoryTabContent(uiState, viewModel)
             }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
 
         if (uiState.showFirstTimeCompletion) {
             AlertDialog(
+                containerColor = CardSurface,
                 onDismissRequest = { viewModel.dismissCompletionDialog() },
                 confirmButton = {
                     TextButton(onClick = { viewModel.dismissCompletionDialog() }) {
-                        Text("Awesome!")
+                        Text("Awesome!", color = PrimaryAccent)
                     }
                 },
-                title = { Text("🎉 Lesson Completed!") },
-                text = { Text("Great job! You've mastered the ${rootNote.displayName} ${conceptType.displayName}. Your progress has been saved.") },
-                icon = { Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                title = { Text("🎉 Lesson Completed!", color = TextPrimary) },
+                text = { Text("Great job! You've mastered the ${rootNote.displayName} ${conceptType.displayName}. Your progress has been saved.", color = TextSecondary) },
+                icon = { Icon(Icons.Default.Star, contentDescription = null, tint = PrimaryAccent) }
             )
         }
     }
@@ -155,23 +141,39 @@ fun PracticeTabContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PracticeProgressBar(
-            current = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.completedNotes.size 
-                     else uiState.completedNotes.size,
-            total = uiState.generatedNotes.size
+        LessonSummaryCard(
+            lessonName = "${uiState.rootNote.displayName} ${uiState.conceptType.displayName}",
+            completedNotes = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.completedNotes.size
+                            else uiState.completedNotes.size,
+            totalNotes = uiState.generatedNotes.size,
+            formula = uiState.theoryExplanation?.formula ?: "--"
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        SectionHeader(title = "Notes to Practice")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Notes to Practice",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
         
         val fingeringGuide = uiState.getCurrentFingeringGuide()
 
         Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -182,52 +184,70 @@ fun PracticeTabContent(
                     uiState.completedNotes.contains(note)
                 }
                 val isTarget = uiState.guidedPractice.isRunning && uiState.guidedPractice.currentIndex == index
+                val isDetected = uiState.isStablePitch && uiState.detectedNote == note
+                
+                val lastResult = uiState.guidedPractice.lastResult
+                val isIncorrect = uiState.guidedPractice.isRunning && 
+                                 index == uiState.guidedPractice.currentIndex && 
+                                 lastResult is PracticeResult.Incorrect
 
-                NoteBubble(
+                NoteChip(
                     note = note,
                     fingerNumber = fingeringGuide?.steps?.getOrNull(index)?.finger?.number,
                     isPlaying = uiState.currentPlayingNote == note,
                     isCompleted = isCompleted,
-                    isDetected = uiState.isStablePitch && uiState.detectedNote == note,
-                    isTarget = isTarget
+                    isDetected = isDetected,
+                    isTarget = isTarget,
+                    isIncorrect = isIncorrect
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        MiniKeyboardView(
+        GuidedPracticeCard(
+            state = uiState.guidedPractice,
+            totalNotes = uiState.generatedNotes.size,
+            onStart = { viewModel.startGuidedPractice() },
+            onReset = { viewModel.resetGuidedPractice() },
+            onPlayTarget = { viewModel.playTargetNote() }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+
+
+        VirtualKeyboard(
             targetNote = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.targetNote else null,
             detectedNote = if (uiState.isStablePitch) uiState.detectedNote else null,
             playingNote = uiState.currentPlayingNote
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (uiState.isListening) {
             VolumeMeter(amplitude = uiState.inputVolume)
+//            Spacer(modifier = Modifier.height(24.dp))
+//
+//            DetectedNoteDisplay(
+//                detectedNote = uiState.detectedNote,
+//                isStable = uiState.isStablePitch
+//            )
             Spacer(modifier = Modifier.height(16.dp))
-            
-            DetectedNoteDisplay(
-                detectedNote = uiState.detectedNote,
-                frequency = uiState.detectedFrequency,
-                isStable = uiState.isStablePitch
-            )
-            Spacer(modifier = Modifier.height(32.dp))
         }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            ActionButtonCard(
+                title = "Play",
+                icon = Icons.Default.PlayArrow,
                 onClick = { viewModel.playSequence() },
                 modifier = Modifier.weight(1f),
                 enabled = !uiState.isPlaying && !uiState.isListening
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Play")
-            }
+            )
             
-            OutlinedButton(
+            ActionButtonCard(
+                title = if (uiState.isListening) "Stop" else "Listen",
+                icon = if (uiState.isListening) Icons.Default.Close else Icons.Default.Info,
                 onClick = {
                     when (PackageManager.PERMISSION_GRANTED) {
                         ContextCompat.checkSelfPermission(
@@ -242,23 +262,14 @@ fun PracticeTabContent(
                     }
                 },
                 modifier = Modifier.weight(1f),
-                enabled = !uiState.isPlaying
-            ) {
-                Icon(if (uiState.isListening) Icons.Default.Close else Icons.Default.Info, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (uiState.isListening) "Stop" else "Listen")
-            }
+                enabled = !uiState.isPlaying,
+                containerColor = if (uiState.isListening) SuccessAccent.copy(alpha = 0.2f) else CardSurface,
+                contentColor = if (uiState.isListening) SuccessAccent else PrimaryAccent
+            )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
 
-        GuidedPracticeCard(
-            state = uiState.guidedPractice,
-            totalNotes = uiState.generatedNotes.size,
-            onStart = { viewModel.startGuidedPractice() },
-            onReset = { viewModel.resetGuidedPractice() },
-            onPlayTarget = { viewModel.playTargetNote() }
-        )
+
     }
 }
 
@@ -267,14 +278,36 @@ fun LearnTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        SectionHeader(title = "Hand Position", icon = Icons.Default.Face)
-        HandSelector(
-            selectedHand = uiState.selectedHand,
-            onHandSelected = { viewModel.toggleHand(it) }
-        )
+        PracticeTheoryCard(title = "Hand Position") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                com.example.pianoscales.theory.fingering.Hand.entries.forEach { hand ->
+                    val isSelected = uiState.selectedHand == hand
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clickable { viewModel.toggleHand(hand) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) PrimaryAccent else ElevatedSurface
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = hand.name.lowercase().replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) PrimaryBackground else TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
         
         Spacer(modifier = Modifier.height(24.dp))
         FingerLegendCard()
@@ -283,57 +316,60 @@ fun LearnTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
         
         val fingeringGuide = uiState.getCurrentFingeringGuide()
         if (fingeringGuide != null) {
-            TheoryCard(title = "Recommended Fingering", content = {
+            PracticeTheoryCard(title = "Recommended Fingering") {
                 Text(
                     text = uiState.theoryExplanation?.fingeringExplanation ?: "",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     fingeringGuide.steps.forEach { step ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(step.note.displayName, style = MaterialTheme.typography.labelSmall)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                step.note.displayName, 
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextMuted
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Surface(
                                 shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer,
+                                color = PrimaryAccent,
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
                                         text = step.finger.number.toString(),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryBackground
                                     )
                                 }
                             }
                         }
                     }
                 }
-            })
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
         
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        PracticeTheoryCard(title = "Technique Tip") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryAccent)
                 Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text("Technique Tip", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Correct fingering builds muscle memory and improves speed. Start slow and ensure each finger is relaxed.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                Text(
+                    "Correct fingering builds muscle memory and improves speed. Start slow and ensure each finger is relaxed.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
             }
         }
     }
@@ -346,237 +382,65 @@ fun TheoryTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 20.dp)
     ) {
-        TheoryCard(title = "Concept") {
-            Text(theory.generalExplanation, style = MaterialTheme.typography.bodyMedium)
+        PracticeTheoryCard(title = "Concept") {
+            Text(theory.generalExplanation, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        TheoryCard(title = "Formula") {
+        PracticeTheoryCard(title = "Formula") {
             Text(
                 text = theory.formula,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.primary
+                color = PrimaryAccent
             )
             Spacer(modifier = Modifier.height(8.dp))
             theory.formulaMeaning.forEach { (key, value) ->
-                Text("$key = $value", style = MaterialTheme.typography.bodySmall)
+                Text("$key = $value", style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TheoryCard(title = "Construction") {
+        PracticeTheoryCard(title = "Construction") {
             theory.constructionSteps.forEach { step ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-                    Text(step.interval, modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(step.resultNote.displayName, modifier = Modifier.padding(start = 12.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically, 
+                    modifier = Modifier.padding(vertical = 6.dp)
+                ) {
+                    Text(
+                        step.interval, 
+                        modifier = Modifier.width(48.dp), 
+                        fontWeight = FontWeight.Bold, 
+                        color = SecondaryAccent
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null, 
+                        modifier = Modifier.size(16.dp),
+                        tint = TextMuted
+                    )
+                    Text(
+                        step.resultNote.displayName, 
+                        modifier = Modifier.padding(start = 12.dp), 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
                 }
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        TheoryCard(title = "Interesting Fact") {
+        PracticeTheoryCard(title = "Pattern Breakdown") {
             Text(
-                "The ${uiState.conceptType.displayName} is one of the most important concepts for any piano beginner to master.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-    }
-}
-
-@Composable
-fun GuidedPracticeCard(
-    state: GuidedPracticeState,
-    totalNotes: Int,
-    onStart: () -> Unit,
-    onReset: () -> Unit,
-    onPlayTarget: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        border = if (state.isRunning) BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary) else null
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Guided Practice",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (!state.isRunning) {
-                Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Start Guided Lesson")
-                }
-            } else {
-                if (state.lessonCompleted) {
-                    Text(
-                        text = "🎉 Lesson Complete!",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "$totalNotes / $totalNotes Notes Correct",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Restart Lesson")
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("TARGET NOTE", style = MaterialTheme.typography.labelSmall)
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(80.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = state.targetNote?.displayName ?: "--",
-                                            style = MaterialTheme.typography.displayMedium,
-                                            color = MaterialTheme.colorScheme.onPrimary
-                                        )
-                                        state.targetFinger?.let {
-                                            Text(
-                                                text = "Finger ${it.number}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            state.targetFinger?.let {
-                                Text(
-                                    text = it.name,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier.padding(top = 4.dp),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            IconButton(onClick = onPlayTarget) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Play Target", tint = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.weight(1f).padding(start = 16.dp)
-                        ) {
-                            Text(
-                                text = "${state.currentIndex} / $totalNotes",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            LinearProgressIndicator(
-                                progress = { state.currentIndex.toFloat() / totalNotes },
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.outline
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            when (val result = state.lastResult) {
-                                is PracticeResult.Correct -> {
-                                    Text("✅ Correct!", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
-                                    result.expectedFinger?.let {
-                                        Text("Expected Finger: ${it.number} (${it.name})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
-                                    }
-                                }
-                                is PracticeResult.Incorrect -> {
-                                    Text("❌ Try Again", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                                    Text("Expected ${result.expected.displayName}, detected ${result.detected.displayName}", style = MaterialTheme.typography.bodySmall)
-                                }
-                                null -> {
-                                    Text("Play the note above", style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
-                        Text("Reset Lesson")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PracticeProgressBar(current: Int, total: Int) {
-    if (total == 0) return
-    val progress = current.toFloat() / total.toFloat()
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "ProgressBar"
-    )
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Text(
-                text = "Progress",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "$current / $total Notes",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { animatedProgress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(12.dp)
-                .clip(RoundedCornerShape(6.dp)),
-            color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.outline,
-        )
-        if (progress >= 1f) {
-            Text(
-                text = "Scale Complete! 🎉",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .align(Alignment.CenterHorizontally),
-                fontWeight = FontWeight.Bold
+                "The ${uiState.conceptType.displayName} follows a specific pattern of intervals that defines its unique musical character.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
             )
         }
     }
@@ -585,7 +449,7 @@ fun PracticeProgressBar(current: Int, total: Int) {
 @Composable
 fun VolumeMeter(amplitude: Float) {
     val animatedAmplitude by animateFloatAsState(
-        targetValue = (amplitude * 5f).coerceIn(0f, 1f), // Scale up for better visibility
+        targetValue = (amplitude * 5f).coerceIn(0f, 1f),
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "VolumeMeter"
     )
@@ -594,27 +458,28 @@ fun VolumeMeter(amplitude: Float) {
         Text(
             text = "Input Level",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = TextMuted
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         LinearProgressIndicator(
             progress = { animatedAmplitude },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp)),
-            color = if (animatedAmplitude > 0.8f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.outline,
+            color = if (animatedAmplitude > 0.8f) Color(0xFFEF4444) else PrimaryAccent,
+            trackColor = ElevatedSurface,
+            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
         )
     }
 }
 
 @Composable
-fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float, isStable: Boolean) {
+fun DetectedNoteDisplay(detectedNote: Note?, isStable: Boolean) {
     val statusText = when {
         detectedNote == null -> "🎤 Listening..."
         !isStable -> "Detecting..."
-        else -> "✅ Stable Note Detected"
+        else -> "✓ Stable Note Detected"
     }
 
     Column(
@@ -626,126 +491,24 @@ fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float, isStable: Boolean
         Text(
             text = statusText,
             style = MaterialTheme.typography.titleMedium,
-            color = if (isStable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isStable) SuccessAccent else TextSecondary,
             fontWeight = if (isStable) FontWeight.Bold else FontWeight.Normal
         )
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
         Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = if (isStable) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(120.dp)
+            shape = RoundedCornerShape(24.dp),
+            color = if (isStable) SuccessAccent.copy(alpha = 0.2f) else CardSurface,
+            modifier = Modifier.size(120.dp),
+            border = if (isStable) androidx.compose.foundation.BorderStroke(2.dp, SuccessAccent) else null
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = detectedNote?.displayName ?: "--",
                     style = MaterialTheme.typography.displayLarge,
-                    color = if (isStable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        
-        if (frequency > 0) {
-            Text(
-                text = String.format("%.1f Hz", frequency),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 8.dp),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-@Composable
-fun NoteBubble(
-    note: Note,
-    fingerNumber: Int? = null,
-    isPlaying: Boolean,
-    isCompleted: Boolean,
-    isDetected: Boolean,
-    isTarget: Boolean = false
-) {
-    val targetContainerColor = when {
-        isTarget -> MaterialTheme.colorScheme.primaryContainer
-        isCompleted -> MaterialTheme.colorScheme.tertiary
-        isPlaying -> MaterialTheme.colorScheme.primary
-        isDetected -> MaterialTheme.colorScheme.secondaryContainer
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    val targetContentColor = when {
-        isTarget -> MaterialTheme.colorScheme.onPrimaryContainer
-        isCompleted || isPlaying -> MaterialTheme.colorScheme.onPrimary
-        isDetected -> MaterialTheme.colorScheme.onSecondaryContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    val containerColor by animateColorAsState(
-        targetValue = targetContainerColor,
-        animationSpec = tween(durationMillis = 300),
-        label = "ContainerColor"
-    )
-    val contentColor by animateColorAsState(
-        targetValue = targetContentColor,
-        animationSpec = tween(durationMillis = 300),
-        label = "ContentColor"
-    )
-
-    val scale by animateFloatAsState(
-        targetValue = if (isDetected || isPlaying || isTarget) 1.15f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "Scale"
-    )
-
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = containerColor,
-        contentColor = contentColor,
-        modifier = Modifier
-            .size(width = 64.dp, height = 80.dp)
-            .scale(scale)
-            .then(
-                if (isDetected || isTarget) Modifier.border(
-                    width = if (isTarget) 3.dp else 2.dp,
-                    color = if (isTarget) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                    shape = RoundedCornerShape(16.dp)
-                ) else Modifier
-            ),
-        shadowElevation = if (isPlaying || isDetected || isTarget) 8.dp else 2.dp
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            if (isTarget && !isCompleted) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Text(
-                text = note.displayName,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            fingerNumber?.let { 
-                Text(
-                    text = "($it)",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isPlaying || isCompleted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
-                )
-            }
-            AnimatedVisibility(visible = isCompleted) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Completed",
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onTertiary
+                    fontWeight = FontWeight.Black,
+                    color = if (isStable) SuccessAccent else TextMuted
                 )
             }
         }
