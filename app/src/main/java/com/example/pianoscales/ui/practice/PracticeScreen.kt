@@ -44,6 +44,8 @@ import com.example.pianoscales.theory.fingering.Hand
 import com.example.pianoscales.ui.components.LessonCard
 import com.example.pianoscales.ui.components.SectionHeader
 import com.example.pianoscales.ui.components.TheoryCard
+import com.example.pianoscales.ui.theme.PrimaryBackground
+import com.example.pianoscales.ui.theme.TextPrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,18 +73,19 @@ fun PracticeScreen(
     }
 
     Scaffold(
+        containerColor = PrimaryBackground,
         topBar = {
             Column {
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("${rootNote.displayName} ${conceptType.displayName}")
+                            Text("${rootNote.displayName} ${conceptType.displayName}", color = TextPrimary)
                             if (uiState.isLessonAlreadyCompleted || uiState.guidedPractice.lessonCompleted) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = "Completed",
-                                    tint = Color(0xFF4CAF50),
+                                    tint = MaterialTheme.colorScheme.tertiary,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -90,11 +93,16 @@ fun PracticeScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
                 )
-                TabRow(selectedTabIndex = selectedTab) {
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = PrimaryBackground,
+                    contentColor = MaterialTheme.colorScheme.primary
+                ) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
                             selected = selectedTab == index,
@@ -130,7 +138,7 @@ fun PracticeScreen(
                 },
                 title = { Text("🎉 Lesson Completed!") },
                 text = { Text("Great job! You've mastered the ${rootNote.displayName} ${conceptType.displayName}. Your progress has been saved.") },
-                icon = { Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700)) }
+                icon = { Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
             )
         }
     }
@@ -312,9 +320,9 @@ fun LearnTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
         
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(18.dp)
         ) {
             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -392,10 +400,9 @@ fun GuidedPracticeCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (state.isRunning) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
-            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         border = if (state.isRunning) BorderStroke(width = 2.dp, color = MaterialTheme.colorScheme.primary) else null
     ) {
@@ -422,7 +429,7 @@ fun GuidedPracticeCard(
                     Text(
                         text = "🎉 Lesson Complete!",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = Color(0xFF4CAF50),
+                        color = MaterialTheme.colorScheme.tertiary,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -453,13 +460,13 @@ fun GuidedPracticeCard(
                                         Text(
                                             text = state.targetNote?.displayName ?: "--",
                                             style = MaterialTheme.typography.displayMedium,
-                                            color = Color.White
+                                            color = MaterialTheme.colorScheme.onPrimary
                                         )
                                         state.targetFinger?.let {
                                             Text(
                                                 text = "Finger ${it.number}",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = Color.White.copy(alpha = 0.8f)
+                                                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                                             )
                                         }
                                     }
@@ -489,16 +496,18 @@ fun GuidedPracticeCard(
                             )
                             LinearProgressIndicator(
                                 progress = { state.currentIndex.toFloat() / totalNotes },
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape)
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.outline
                             )
                             
                             Spacer(modifier = Modifier.height(8.dp))
                             
                             when (val result = state.lastResult) {
                                 is PracticeResult.Correct -> {
-                                    Text("✅ Correct!", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
+                                    Text("✅ Correct!", color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
                                     result.expectedFinger?.let {
-                                        Text("Expected Finger: ${it.number} (${it.name})", style = MaterialTheme.typography.bodySmall, color = Color(0xFF4CAF50))
+                                        Text("Expected Finger: ${it.number} (${it.name})", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
                                     }
                                 }
                                 is PracticeResult.Incorrect -> {
@@ -515,190 +524,6 @@ fun GuidedPracticeCard(
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedButton(onClick = onReset, modifier = Modifier.fillMaxWidth()) {
                         Text("Reset Lesson")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TheoryPanel(
-    theory: TheoryExplanation,
-    isExpanded: Boolean,
-    onToggleExpansion: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onToggleExpansion() },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Theory Explanation",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.Close else Icons.Default.Menu,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand"
-                )
-            }
-
-            AnimatedVisibility(visible = isExpanded) {
-                Column(modifier = Modifier.padding(top = 16.dp)) {
-                    Text(
-                        text = theory.generalExplanation,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text("Formula", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        text = theory.formula,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                    
-                    theory.formulaMeaning.forEach { (key, value) ->
-                        Text(
-                            text = "$key = $value",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Construction", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                            .padding(12.dp)
-                    ) {
-                        Text("Start at ${theory.title.split(" ")[0]}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        theory.constructionSteps.forEach { step ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = step.interval,
-                                    modifier = Modifier.width(40.dp),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
-                                Text(
-                                    text = step.resultNote.displayName,
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Scale Degrees", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        theory.scaleDegrees.forEach { degreeInfo ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Text(degreeInfo.degree, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                    Text(
-                                        text = degreeInfo.note.displayName,
-                                        modifier = Modifier.padding(start = 8.dp),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                                Text(
-                                    text = degreeInfo.name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
-                            }
-                        }
-                    }
-
-                    if (theory.fingeringGuides.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text("Recommended Fingering", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = theory.fingeringExplanation,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-
-                        theory.fingeringGuides.forEach { guide ->
-                            Column(modifier = Modifier.padding(bottom = 12.dp)) {
-                                Text(
-                                    text = guide.hand.displayName,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    guide.steps.forEach { step ->
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(step.note.displayName, style = MaterialTheme.typography.labelSmall)
-                                            Text(
-                                                text = step.finger.number.toString(),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Why Fingering Matters",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Correct fingering creates efficient hand movement, builds muscle memory, improves speed, and helps you play fluently. Learning proper fingering from the beginning prevents bad habits later.",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -730,7 +555,7 @@ fun PracticeProgressBar(current: Int, total: Int) {
             Text(
                 text = "$current / $total Notes",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -740,14 +565,14 @@ fun PracticeProgressBar(current: Int, total: Int) {
                 .fillMaxWidth()
                 .height(12.dp)
                 .clip(RoundedCornerShape(6.dp)),
-            color = if (progress >= 1f) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.outline,
         )
         if (progress >= 1f) {
             Text(
                 text = "Scale Complete! 🎉",
                 style = MaterialTheme.typography.labelLarge,
-                color = Color(0xFF4CAF50),
+                color = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier
                     .padding(top = 8.dp)
                     .align(Alignment.CenterHorizontally),
@@ -769,7 +594,7 @@ fun VolumeMeter(amplitude: Float) {
         Text(
             text = "Input Level",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(4.dp))
         LinearProgressIndicator(
@@ -778,8 +603,8 @@ fun VolumeMeter(amplitude: Float) {
                 .fillMaxWidth()
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp)),
-            color = if (animatedAmplitude > 0.8f) Color.Red else MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            color = if (animatedAmplitude > 0.8f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.outline,
         )
     }
 }
@@ -801,14 +626,14 @@ fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float, isStable: Boolean
         Text(
             text = statusText,
             style = MaterialTheme.typography.titleMedium,
-            color = if (isStable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+            color = if (isStable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (isStable) FontWeight.Bold else FontWeight.Normal
         )
         
         Spacer(modifier = Modifier.height(8.dp))
         
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(18.dp),
             color = if (isStable) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.size(120.dp)
         ) {
@@ -825,7 +650,8 @@ fun DetectedNoteDisplay(detectedNote: Note?, frequency: Float, isStable: Boolean
             Text(
                 text = String.format("%.1f Hz", frequency),
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 8.dp)
+                modifier = Modifier.padding(top = 8.dp),
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -842,7 +668,7 @@ fun NoteBubble(
 ) {
     val targetContainerColor = when {
         isTarget -> MaterialTheme.colorScheme.primaryContainer
-        isCompleted -> Color(0xFF4CAF50) // Material Green 500
+        isCompleted -> MaterialTheme.colorScheme.tertiary
         isPlaying -> MaterialTheme.colorScheme.primary
         isDetected -> MaterialTheme.colorScheme.secondaryContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
@@ -850,7 +676,7 @@ fun NoteBubble(
 
     val targetContentColor = when {
         isTarget -> MaterialTheme.colorScheme.onPrimaryContainer
-        isCompleted || isPlaying -> Color.White
+        isCompleted || isPlaying -> MaterialTheme.colorScheme.onPrimary
         isDetected -> MaterialTheme.colorScheme.onSecondaryContainer
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -911,7 +737,7 @@ fun NoteBubble(
                     text = "($it)",
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isPlaying || isCompleted) Color.White else MaterialTheme.colorScheme.primary
+                    color = if (isPlaying || isCompleted) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
                 )
             }
             AnimatedVisibility(visible = isCompleted) {
@@ -919,7 +745,7 @@ fun NoteBubble(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Completed",
                     modifier = Modifier.size(20.dp),
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onTertiary
                 )
             }
         }

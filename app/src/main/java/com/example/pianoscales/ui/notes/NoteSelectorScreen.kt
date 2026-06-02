@@ -1,6 +1,7 @@
 package com.example.pianoscales.ui.notes
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -31,6 +32,8 @@ import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.ui.components.LessonCard
 import com.example.pianoscales.ui.components.SectionHeader
+import com.example.pianoscales.ui.theme.PrimaryBackground
+import com.example.pianoscales.ui.theme.TextPrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,8 +45,12 @@ fun NoteSelectorScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
+        containerColor = PrimaryBackground,
         topBar = {
-            TopAppBar(title = { Text("Piano Journey") })
+            TopAppBar(
+                title = { Text("Piano Journey", color = TextPrimary) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
+            )
         }
     ) { padding ->
         LazyVerticalGrid(
@@ -51,7 +58,7 @@ fun NoteSelectorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(20.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -105,9 +112,12 @@ fun NoteDashboardCard(
             .aspectRatio(0.9f)
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = if (isFullyCompleted) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface
+            containerColor = if (isFullyCompleted) 
+                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f) 
+            else 
+                MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
@@ -124,7 +134,7 @@ fun NoteDashboardCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${progress.completedLessons}/${progress.totalLessons} Complete",
+                text = "${progress.completedLessons}/${progress.totalLessons}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -135,8 +145,8 @@ fun NoteDashboardCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(CircleShape),
-                color = if (isFullyCompleted) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                color = if (isFullyCompleted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.outline
             )
         }
     }
@@ -147,16 +157,17 @@ fun OverallProgressDashboard(progress: OverallProgress) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
         )
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
                 text = "Global Progress",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -167,12 +178,14 @@ fun OverallProgressDashboard(progress: OverallProgress) {
             ) {
                 Text(
                     text = "${progress.completedLessons} / ${progress.totalLessons} Lessons",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${(progress.percentage * 100).toInt()}%",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -183,72 +196,8 @@ fun OverallProgressDashboard(progress: OverallProgress) {
                     .height(12.dp)
                     .clip(CircleShape),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                trackColor = MaterialTheme.colorScheme.outline
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun NoteCard(
-    note: Note,
-    progress: NoteProgress,
-    onClick: () -> Unit
-) {
-    val isFullyCompleted = progress.completedLessons == progress.totalLessons && progress.totalLessons > 0
-    
-    Card(
-        onClick = onClick,
-        modifier = Modifier
-            .aspectRatio(0.85f)
-            .fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isFullyCompleted) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface
-        ),
-        border = if (isFullyCompleted) BorderStroke(2.dp, Color(0xFF4CAF50)) else null
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (isFullyCompleted) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .size(16.dp),
-                    tint = Color(0xFF4CAF50)
-                )
-            }
-            
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = note.displayName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${progress.completedLessons}/${progress.totalLessons}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { progress.percentage },
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(4.dp)
-                        .clip(CircleShape),
-                    color = if (isFullyCompleted) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            }
         }
     }
 }

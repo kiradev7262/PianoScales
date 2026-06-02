@@ -7,7 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,10 +55,10 @@ fun LessonCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = if (isCompleted) 
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                MaterialTheme.colorScheme.surfaceVariant
             else 
                 MaterialTheme.colorScheme.surface
         )
@@ -90,10 +89,10 @@ fun LessonCard(
                     )
                 } else if (isCompleted) {
                     Text(
-                        text = "MASTERED",
+                        text = "COMPLETED",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF4CAF50)
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
@@ -103,8 +102,8 @@ fun LessonCard(
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth(),
-                color = if (isCompleted) Color(0xFF4CAF50) else MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                color = if (isCompleted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.outline
             )
         }
     }
@@ -118,9 +117,9 @@ fun TheoryCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

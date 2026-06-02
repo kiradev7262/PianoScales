@@ -77,19 +77,19 @@ private fun WhiteKey(
 ) {
     val backgroundColor = when {
         isPlaying -> MaterialTheme.colorScheme.primary
-        isDetected -> Color(0xFF4CAF50)
+        isDetected -> MaterialTheme.colorScheme.tertiary
         isTarget -> MaterialTheme.colorScheme.primaryContainer
         else -> Color.White
     }
 
     val textColor = when {
-        isPlaying || isDetected -> Color.White
+        isPlaying || isDetected -> MaterialTheme.colorScheme.onPrimary
         else -> Color.Black
     }
 
     Box(
         modifier = modifier
-            .border(0.5.dp, Color.LightGray)
+            .border(0.5.dp, Color.Gray)
             .background(backgroundColor)
             .padding(bottom = 8.dp),
         contentAlignment = Alignment.BottomCenter
@@ -113,13 +113,13 @@ private fun BlackKey(
 ) {
     val backgroundColor = when {
         isPlaying -> MaterialTheme.colorScheme.primary
-        isDetected -> Color(0xFF4CAF50)
+        isDetected -> MaterialTheme.colorScheme.tertiary
         isTarget -> MaterialTheme.colorScheme.primaryContainer
         else -> Color.Black
     }
 
     val textColor = when {
-        isPlaying || isDetected -> Color.White
+        isPlaying || isDetected -> MaterialTheme.colorScheme.onPrimary
         else -> Color.White
     }
 
