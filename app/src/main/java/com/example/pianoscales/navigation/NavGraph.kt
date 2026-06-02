@@ -29,9 +29,14 @@ fun NavGraph(navController: NavHostController) {
         startDestination = Screen.NoteSelector.route
     ) {
         composable(Screen.NoteSelector.route) {
-            NoteSelectorScreen { note ->
-                navController.navigate(Screen.ConceptSelector.createRoute(note))
-            }
+            NoteSelectorScreen(
+                onNoteSelected = { note ->
+                    navController.navigate(Screen.ConceptSelector.createRoute(note))
+                },
+                onContinueLesson = { note, concept ->
+                    navController.navigate(Screen.Practice.createRoute(note, concept))
+                }
+            )
         }
         composable(
             route = Screen.ConceptSelector.route,

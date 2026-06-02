@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +41,9 @@ import com.example.pianoscales.theory.Note
 import com.example.pianoscales.theory.TheoryExplanation
 import com.example.pianoscales.theory.fingering.FingerInfo
 import com.example.pianoscales.theory.fingering.Hand
+import com.example.pianoscales.ui.components.LessonCard
+import com.example.pianoscales.ui.components.SectionHeader
+import com.example.pianoscales.ui.components.TheoryCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +55,8 @@ fun PracticeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Practice", "Learn", "Theory")
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -66,176 +72,51 @@ fun PracticeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${rootNote.displayName} ${conceptType.displayName}")
-                        if (uiState.isLessonAlreadyCompleted || uiState.guidedPractice.lessonCompleted) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Completed",
-                                tint = Color(0xFF4CAF50),
-                                modifier = Modifier.size(24.dp)
-                            )
+            Column {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${rootNote.displayName} ${conceptType.displayName}")
+                            if (uiState.isLessonAlreadyCompleted || uiState.guidedPractice.lessonCompleted) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = "Completed",
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                )
+                TabRow(selectedTabIndex = selectedTab) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) }
+                        )
                     }
                 }
-            )
+            }
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (conceptType.category == ConceptCategory.SCALE) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Text("Include Octave Note", style = MaterialTheme.typography.bodyMedium)
-                    Switch(
-                        checked = uiState.includeOctave,
-                        onCheckedChange = { viewModel.toggleOctave() },
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-            }
-
-            Text(
-                text = "Notes to practice:",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            val fingeringGuide = uiState.getCurrentFingeringGuide()
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp),
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(uiState.generatedNotes.indices.toList()) { index ->
-                    val note = uiState.generatedNotes[index]
-                    NoteBubble(
-                        note = note,
-                        fingerNumber = fingeringGuide?.steps?.getOrNull(index)?.finger?.number,
-                        isPlaying = uiState.currentPlayingNote == note,
-                        isCompleted = if (uiState.guidedPractice.isRunning) {
-                            uiState.guidedPractice.completedNotes.contains(index)
-                        } else {
-                            uiState.completedNotes.contains(note)
-                        },
-                        isDetected = uiState.isStablePitch && uiState.detectedNote == note,
-                        isTarget = uiState.guidedPractice.isRunning && uiState.guidedPractice.currentIndex == index
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-
-            HandSelector(
-                selectedHand = uiState.selectedHand,
-                onHandSelected = { viewModel.toggleHand(it) }
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            FingerLegendCard()
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            PracticeProgressBar(
-                current = uiState.generatedNotes.count { uiState.completedNotes.contains(it) },
-                total = uiState.generatedNotes.size
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            if (uiState.isListening) {
-                VolumeMeter(amplitude = uiState.inputVolume)
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                DetectedNoteDisplay(
-                    detectedNote = uiState.detectedNote,
-                    frequency = uiState.detectedFrequency,
-                    isStable = uiState.isStablePitch
-                )
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-
-            Button(
-                onClick = { viewModel.playSequence() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isPlaying && !uiState.isListening
-            ) {
-                Text(if (uiState.isPlaying) "Playing..." else "Play Sequence")
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = {
-                    when (PackageManager.PERMISSION_GRANTED) {
-                        ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO
-                        ) -> {
-                            viewModel.toggleListening()
-                        }
-                        else -> {
-                            launcher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isPlaying
-            ) {
-                Text(if (uiState.isListening) "Stop Listening" else "Start Listening")
-            }
-
-            if (uiState.completedNotes.isNotEmpty() && !uiState.guidedPractice.isRunning) {
-                TextButton(
-                    onClick = { viewModel.resetProgress() },
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Reset Progress")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            GuidedPracticeCard(
-                state = uiState.guidedPractice,
-                totalNotes = uiState.generatedNotes.size,
-                onStart = { viewModel.startGuidedPractice() },
-                onReset = { viewModel.resetGuidedPractice() },
-                onPlayTarget = { viewModel.playTargetNote() }
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(16.dp))
-
-            uiState.theoryExplanation?.let { theory ->
-                TheoryPanel(
-                    theory = theory,
-                    isExpanded = uiState.isTheoryExpanded,
-                    onToggleExpansion = { viewModel.toggleTheoryExpansion() }
-                )
+            when (selectedTab) {
+                0 -> PracticeTabContent(uiState, viewModel, launcher)
+                1 -> LearnTabContent(uiState, viewModel)
+                2 -> TheoryTabContent(uiState, viewModel)
             }
         }
 
@@ -250,6 +131,252 @@ fun PracticeScreen(
                 title = { Text("🎉 Lesson Completed!") },
                 text = { Text("Great job! You've mastered the ${rootNote.displayName} ${conceptType.displayName}. Your progress has been saved.") },
                 icon = { Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700)) }
+            )
+        }
+    }
+}
+
+@Composable
+fun PracticeTabContent(
+    uiState: PracticeUiState,
+    viewModel: PracticeViewModel,
+    launcher: androidx.activity.result.ActivityResultLauncher<String>
+) {
+    val context = LocalContext.current
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        PracticeProgressBar(
+            current = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.completedNotes.size 
+                     else uiState.completedNotes.size,
+            total = uiState.generatedNotes.size
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        SectionHeader(title = "Notes to Practice")
+        
+        val fingeringGuide = uiState.getCurrentFingeringGuide()
+
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            uiState.generatedNotes.forEachIndexed { index, note ->
+                val isCompleted = if (uiState.guidedPractice.isRunning) {
+                    uiState.guidedPractice.completedNotes.contains(index)
+                } else {
+                    uiState.completedNotes.contains(note)
+                }
+                val isTarget = uiState.guidedPractice.isRunning && uiState.guidedPractice.currentIndex == index
+
+                NoteBubble(
+                    note = note,
+                    fingerNumber = fingeringGuide?.steps?.getOrNull(index)?.finger?.number,
+                    isPlaying = uiState.currentPlayingNote == note,
+                    isCompleted = isCompleted,
+                    isDetected = uiState.isStablePitch && uiState.detectedNote == note,
+                    isTarget = isTarget
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        MiniKeyboardView(
+            targetNote = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.targetNote else null,
+            detectedNote = if (uiState.isStablePitch) uiState.detectedNote else null,
+            playingNote = uiState.currentPlayingNote
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (uiState.isListening) {
+            VolumeMeter(amplitude = uiState.inputVolume)
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            DetectedNoteDisplay(
+                detectedNote = uiState.detectedNote,
+                frequency = uiState.detectedFrequency,
+                isStable = uiState.isStablePitch
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(
+                onClick = { viewModel.playSequence() },
+                modifier = Modifier.weight(1f),
+                enabled = !uiState.isPlaying && !uiState.isListening
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Play")
+            }
+            
+            OutlinedButton(
+                onClick = {
+                    when (PackageManager.PERMISSION_GRANTED) {
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.RECORD_AUDIO
+                        ) -> {
+                            viewModel.toggleListening()
+                        }
+                        else -> {
+                            launcher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                enabled = !uiState.isPlaying
+            ) {
+                Icon(if (uiState.isListening) Icons.Default.Close else Icons.Default.Info, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (uiState.isListening) "Stop" else "Listen")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        GuidedPracticeCard(
+            state = uiState.guidedPractice,
+            totalNotes = uiState.generatedNotes.size,
+            onStart = { viewModel.startGuidedPractice() },
+            onReset = { viewModel.resetGuidedPractice() },
+            onPlayTarget = { viewModel.playTargetNote() }
+        )
+    }
+}
+
+@Composable
+fun LearnTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        SectionHeader(title = "Hand Position", icon = Icons.Default.Face)
+        HandSelector(
+            selectedHand = uiState.selectedHand,
+            onHandSelected = { viewModel.toggleHand(it) }
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        FingerLegendCard()
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        val fingeringGuide = uiState.getCurrentFingeringGuide()
+        if (fingeringGuide != null) {
+            TheoryCard(title = "Recommended Fingering", content = {
+                Text(
+                    text = uiState.theoryExplanation?.fingeringExplanation ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    fingeringGuide.steps.forEach { step ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(step.note.displayName, style = MaterialTheme.typography.labelSmall)
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = step.finger.number.toString(),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Technique Tip", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Correct fingering builds muscle memory and improves speed. Start slow and ensure each finger is relaxed.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TheoryTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
+    val theory = uiState.theoryExplanation ?: return
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        TheoryCard(title = "Concept") {
+            Text(theory.generalExplanation, style = MaterialTheme.typography.bodyMedium)
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        TheoryCard(title = "Formula") {
+            Text(
+                text = theory.formula,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Black,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            theory.formulaMeaning.forEach { (key, value) ->
+                Text("$key = $value", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        TheoryCard(title = "Construction") {
+            theory.constructionSteps.forEach { step ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+                    Text(step.interval, modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(step.resultNote.displayName, modifier = Modifier.padding(start = 12.dp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        TheoryCard(title = "Interesting Fact") {
+            Text(
+                "The ${uiState.conceptType.displayName} is one of the most important concepts for any piano beginner to master.",
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }

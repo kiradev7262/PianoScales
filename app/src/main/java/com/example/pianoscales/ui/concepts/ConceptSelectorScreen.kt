@@ -5,7 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,8 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.pianoscales.theory.ConceptCategory
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.ui.components.LessonCard
+import com.example.pianoscales.ui.components.SectionHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +40,7 @@ fun ConceptSelectorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Select Concept for ${rootNote.displayName}") },
+                title = { Text("${rootNote.displayName} Lessons") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -50,54 +53,36 @@ fun ConceptSelectorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(16.dp)
         ) {
-            items(ConceptType.entries) { concept ->
-                val isCompleted = uiState.completedConcepts.contains(concept)
-                ConceptCard(
-                    concept = concept,
-                    isCompleted = isCompleted,
-                    onClick = { onConceptSelected(concept) }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ConceptCard(
-    concept: ConceptType,
-    isCompleted: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCompleted) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = concept.displayName,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = if (isCompleted) FontWeight.Bold else FontWeight.Normal
-            )
-            if (isCompleted) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "Completed",
-                    tint = Color(0xFF4CAF50)
-                )
+            val groupedConcepts = ConceptType.entries.groupBy { it.category }
+            
+            groupedConcepts.forEach { (category, concepts) ->
+                item {
+                    val icon = when (category) {
+                        ConceptCategory.SCALE -> Icons.Default.Menu
+                        ConceptCategory.CHORD -> Icons.Default.PlayArrow
+                        ConceptCategory.ARPEGGIO -> Icons.Default.Star
+                    }
+                    SectionHeader(title = category.name.lowercase().replaceFirstChar { it.uppercase() } + "s", icon = icon)
+                }
+                
+                items(concepts) { concept ->
+                    val isCompleted = uiState.completedConcepts.contains(concept)
+                    LessonCard(
+                        title = concept.displayName,
+                        subtitle = if (isCompleted) "Mastered" else "Practice this concept",
+                        progress = if (isCompleted) 1f else 0f,
+                        isCompleted = isCompleted,
+                        onClick = { onConceptSelected(concept) },
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
