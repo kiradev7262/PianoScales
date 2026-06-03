@@ -32,7 +32,7 @@ data class PracticeUiState(
     val inputVolume: Float = 0f,
     val isAudioLoaded: Boolean = false,
     val completedNotes: Set<Note> = emptySet(),
-    val includeOctave: Boolean = true,
+    val includeOctave: Boolean = false,
     val selectedHand: Hand = Hand.RIGHT,
     val theoryExplanation: TheoryExplanation? = null,
     val isTheoryExpanded: Boolean = false,

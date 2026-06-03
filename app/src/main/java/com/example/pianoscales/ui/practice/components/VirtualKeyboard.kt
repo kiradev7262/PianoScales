@@ -19,12 +19,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun VirtualKeyboard(
     onKeyClick: (Note) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val activeHighlights = remember { mutableStateMapOf<Note, Boolean>() }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -53,7 +58,15 @@ fun VirtualKeyboard(
                     whiteNotes.forEach { note ->
                         WhiteKey(
                             note = note,
-                            onClick = { onKeyClick(note) },
+                            isHighlighted = activeHighlights[note] == true,
+                            onClick = { 
+                                activeHighlights[note] = true
+                                coroutineScope.launch {
+                                    delay(200)
+                                    activeHighlights[note] = false
+                                }
+                                onKeyClick(note) 
+                            },
                             modifier = Modifier
                                 .width(whiteKeyWidth)
                                 .fillMaxHeight()
@@ -65,20 +78,32 @@ fun VirtualKeyboard(
                 val blackKeyWidth = whiteKeyWidth * 0.65f
                 val blackKeyHeight = 110.dp
                 
-                // C# (between C and D) - offset by 1 white key width - half of black key width
-                BlackKeyAt(Note.C_SHARP, onKeyClick, whiteKeyWidth * 1f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
-                
-                // D# (between D and E)
-                BlackKeyAt(Note.D_SHARP, onKeyClick, whiteKeyWidth * 2f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
-                
-                // F# (between F and G)
-                BlackKeyAt(Note.F_SHARP, onKeyClick, whiteKeyWidth * 4f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
-                
-                // G# (between G and A)
-                BlackKeyAt(Note.G_SHARP, onKeyClick, whiteKeyWidth * 5f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
-                
-                // A# (between A and B)
-                BlackKeyAt(Note.A_SHARP, onKeyClick, whiteKeyWidth * 6f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
+                // Black Keys
+                val blackKeyList = listOf(
+                    Note.C_SHARP to 1f,
+                    Note.D_SHARP to 2f,
+                    Note.F_SHARP to 4f,
+                    Note.G_SHARP to 5f,
+                    Note.A_SHARP to 6f
+                )
+
+                blackKeyList.forEach { (note, whiteKeyOffset) ->
+                    BlackKeyAt(
+                        note = note,
+                        isHighlighted = activeHighlights[note] == true,
+                        onKeyClick = onKeyClick,
+                        onNoteTapped = { 
+                            activeHighlights[note] = true
+                            coroutineScope.launch {
+                                delay(200)
+                                activeHighlights[note] = false
+                            }
+                        },
+                        offset = whiteKeyWidth * whiteKeyOffset - (blackKeyWidth / 2),
+                        width = blackKeyWidth,
+                        height = blackKeyHeight
+                    )
+                }
             }
         }
     }
@@ -87,14 +112,20 @@ fun VirtualKeyboard(
 @Composable
 private fun BoxScope.BlackKeyAt(
     note: Note,
+    isHighlighted: Boolean,
     onKeyClick: (Note) -> Unit,
+    onNoteTapped: (Note) -> Unit,
     offset: androidx.compose.ui.unit.Dp,
     width: androidx.compose.ui.unit.Dp,
     height: androidx.compose.ui.unit.Dp
 ) {
     BlackKey(
         note = note,
-        onClick = { onKeyClick(note) },
+        isHighlighted = isHighlighted,
+        onClick = { 
+            onNoteTapped(note)
+            onKeyClick(note) 
+        },
         modifier = Modifier
             .offset(x = offset)
             .width(width)
@@ -105,6 +136,7 @@ private fun BoxScope.BlackKeyAt(
 @Composable
 private fun WhiteKey(
     note: Note,
+    isHighlighted: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -112,20 +144,20 @@ private fun WhiteKey(
         modifier = modifier
             .padding(horizontal = 1.dp)
             .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
-            .background(Color.White)
+            .background(if (isHighlighted) PrimaryAccent else Color.White)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
             )
-            .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)),
+            .border(0.5.dp, if (isHighlighted) PrimaryAccent else Color(0xFFE2E8F0), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)),
         contentAlignment = Alignment.BottomCenter
     ) {
         Text(
             text = note.displayName.lowercase(),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = TextMuted,
+            color = if (isHighlighted) PrimaryBackground else TextMuted,
             modifier = Modifier.padding(bottom = 12.dp)
         )
     }
@@ -134,13 +166,14 @@ private fun WhiteKey(
 @Composable
 private fun BlackKey(
     note: Note,
+    isHighlighted: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp))
-            .background(Color(0xFF0F172A))
+            .background(if (isHighlighted) PrimaryAccent else Color(0xFF0F172A))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -152,7 +185,7 @@ private fun BlackKey(
             text = note.displayName.lowercase(),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = TextMuted.copy(alpha = 0.7f),
+            color = if (isHighlighted) PrimaryBackground else TextMuted.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
     }
