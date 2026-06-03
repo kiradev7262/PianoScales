@@ -1,7 +1,5 @@
 package com.example.pianoscales.ui.practice.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,9 +22,6 @@ import com.example.pianoscales.ui.theme.*
 
 @Composable
 fun VirtualKeyboard(
-    targetNote: Note? = null,
-    detectedNote: Note? = null,
-    playingNote: Note? = null,
     onKeyClick: (Note) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -58,10 +53,6 @@ fun VirtualKeyboard(
                     whiteNotes.forEach { note ->
                         WhiteKey(
                             note = note,
-                            isTarget = note == targetNote,
-                            isDetected = note == detectedNote,
-                            isPlaying = note == playingNote,
-                            hasActiveTarget = targetNote != null,
                             onClick = { onKeyClick(note) },
                             modifier = Modifier
                                 .width(whiteKeyWidth)
@@ -75,19 +66,19 @@ fun VirtualKeyboard(
                 val blackKeyHeight = 110.dp
                 
                 // C# (between C and D) - offset by 1 white key width - half of black key width
-                BlackKeyAt(Note.C_SHARP, targetNote, detectedNote, playingNote, onKeyClick, whiteKeyWidth * 1f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
+                BlackKeyAt(Note.C_SHARP, onKeyClick, whiteKeyWidth * 1f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
                 
                 // D# (between D and E)
-                BlackKeyAt(Note.D_SHARP, targetNote, detectedNote, playingNote, onKeyClick, whiteKeyWidth * 2f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
+                BlackKeyAt(Note.D_SHARP, onKeyClick, whiteKeyWidth * 2f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
                 
                 // F# (between F and G)
-                BlackKeyAt(Note.F_SHARP, targetNote, detectedNote, playingNote, onKeyClick, whiteKeyWidth * 4f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
+                BlackKeyAt(Note.F_SHARP, onKeyClick, whiteKeyWidth * 4f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
                 
                 // G# (between G and A)
-                BlackKeyAt(Note.G_SHARP, targetNote, detectedNote, playingNote, onKeyClick, whiteKeyWidth * 5f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
+                BlackKeyAt(Note.G_SHARP, onKeyClick, whiteKeyWidth * 5f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
                 
                 // A# (between A and B)
-                BlackKeyAt(Note.A_SHARP, targetNote, detectedNote, playingNote, onKeyClick, whiteKeyWidth * 6f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
+                BlackKeyAt(Note.A_SHARP, onKeyClick, whiteKeyWidth * 6f - (blackKeyWidth / 2), blackKeyWidth, blackKeyHeight)
             }
         }
     }
@@ -96,9 +87,6 @@ fun VirtualKeyboard(
 @Composable
 private fun BoxScope.BlackKeyAt(
     note: Note,
-    targetNote: Note?,
-    detectedNote: Note?,
-    playingNote: Note?,
     onKeyClick: (Note) -> Unit,
     offset: androidx.compose.ui.unit.Dp,
     width: androidx.compose.ui.unit.Dp,
@@ -106,10 +94,6 @@ private fun BoxScope.BlackKeyAt(
 ) {
     BlackKey(
         note = note,
-        isTarget = note == targetNote,
-        isDetected = note == detectedNote,
-        isPlaying = note == playingNote,
-        hasActiveTarget = targetNote != null,
         onClick = { onKeyClick(note) },
         modifier = Modifier
             .offset(x = offset)
@@ -121,78 +105,27 @@ private fun BoxScope.BlackKeyAt(
 @Composable
 private fun WhiteKey(
     note: Note,
-    isTarget: Boolean,
-    isDetected: Boolean,
-    isPlaying: Boolean,
-    hasActiveTarget: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isHighlighted = isTarget || isDetected || isPlaying
-    
-    // Pulse animation for target note
-    val infiniteTransition = rememberInfiniteTransition(label = "TargetPulse")
-    val pulseAlpha by if (isTarget) {
-        infiniteTransition.animateFloat(
-            initialValue = 0.2f,
-            targetValue = 0.5f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "PulseAlpha"
-        )
-    } else {
-        remember { mutableFloatStateOf(0f) }
-    }
-
-    val highlightColor by animateColorAsState(
-        targetValue = when {
-            isPlaying -> PrimaryAccent.copy(alpha = 0.4f)
-            isDetected && isTarget -> SuccessAccent.copy(alpha = 0.5f)
-            isDetected && hasActiveTarget -> Color(0xFFEF4444).copy(alpha = 0.5f)
-            isDetected -> SuccessAccent.copy(alpha = 0.3f)
-            isTarget -> PrimaryAccent.copy(alpha = pulseAlpha)
-            else -> Color.White
-        },
-        label = "HighlightColor"
-    )
-
-    val accentColor = when {
-        isPlaying -> PrimaryAccent
-        isDetected && isTarget -> SuccessAccent
-        isDetected && hasActiveTarget -> Color(0xFFEF4444)
-        isDetected -> SuccessAccent
-        isTarget -> PrimaryAccent
-        else -> Color(0xFFE2E8F0)
-    }
-
     Box(
         modifier = modifier
             .padding(horizontal = 1.dp)
             .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
-            .background(highlightColor)
+            .background(Color.White)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
             )
-            .then(
-                if (isHighlighted) {
-                    Modifier.border(
-                        if (isTarget) 3.dp else 2.dp, 
-                        accentColor, 
-                        RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)
-                    )
-                } else Modifier.border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
-            ),
+            .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)),
         contentAlignment = Alignment.BottomCenter
     ) {
         Text(
             text = note.displayName.lowercase(),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = if (isHighlighted) FontWeight.Black else FontWeight.Bold,
-            color = if (isHighlighted) accentColor else TextMuted,
+            fontWeight = FontWeight.Bold,
+            color = TextMuted,
             modifier = Modifier.padding(bottom = 12.dp)
         )
     }
@@ -201,69 +134,17 @@ private fun WhiteKey(
 @Composable
 private fun BlackKey(
     note: Note,
-    isTarget: Boolean,
-    isDetected: Boolean,
-    isPlaying: Boolean,
-    hasActiveTarget: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isHighlighted = isTarget || isDetected || isPlaying
-
-    // Pulse animation for target note
-    val infiniteTransition = rememberInfiniteTransition(label = "TargetPulseBlack")
-    val pulseAlpha by if (isTarget) {
-        infiniteTransition.animateFloat(
-            initialValue = 0.6f,
-            targetValue = 0.9f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "PulseAlphaBlack"
-        )
-    } else {
-        remember { mutableFloatStateOf(0f) }
-    }
-    
-    val highlightColor by animateColorAsState(
-        targetValue = when {
-            isPlaying -> PrimaryAccent.copy(alpha = 0.9f)
-            isDetected && isTarget -> SuccessAccent.copy(alpha = 0.8f)
-            isDetected && hasActiveTarget -> Color(0xFFEF4444).copy(alpha = 0.8f)
-            isDetected -> SuccessAccent.copy(alpha = 0.8f)
-            isTarget -> PrimaryAccent.copy(alpha = pulseAlpha)
-            else -> Color(0xFF0F172A)
-        },
-        label = "HighlightColorBlack"
-    )
-
-    val accentColor = when {
-        isPlaying -> PrimaryAccent
-        isDetected && isTarget -> SuccessAccent
-        isDetected && hasActiveTarget -> Color(0xFFEF4444)
-        isDetected -> SuccessAccent
-        isTarget -> PrimaryAccent
-        else -> Color.Transparent
-    }
-
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp))
-            .background(highlightColor)
+            .background(Color(0xFF0F172A))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
-            )
-            .then(
-                if (isHighlighted) {
-                    Modifier.border(
-                        if (isTarget) 2.5.dp else 1.5.dp, 
-                        accentColor,
-                        RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp)
-                    )
-                } else Modifier
             ),
         contentAlignment = Alignment.BottomCenter
     ) {
@@ -271,7 +152,7 @@ private fun BlackKey(
             text = note.displayName.lowercase(),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = if (isHighlighted) Color.White else TextMuted.copy(alpha = 0.7f),
+            color = TextMuted.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
     }
