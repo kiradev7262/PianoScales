@@ -55,6 +55,9 @@ class PracticeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PracticeUiState())
     val uiState: StateFlow<PracticeUiState> = _uiState.asStateFlow()
 
+    private var lastVirtualKeyPressTime: Long = 0L
+    private val SUPPRESSION_WINDOW_MS = 500L
+
     init {
         viewModelScope.launch {
             notePlayer.isLoaded.collect { loaded ->
@@ -124,6 +127,7 @@ class PracticeViewModel @Inject constructor(
             notePlayer.playSequence(
                 notes = _uiState.value.generatedNotes,
                 onNoteStarted = { note ->
+                    lastVirtualKeyPressTime = System.currentTimeMillis()
                     _uiState.update { it.copy(currentPlayingNote = note) }
                 }
             )
@@ -176,18 +180,19 @@ class PracticeViewModel @Inject constructor(
         // 0. Reset pitch detector filters to avoid old note hold interference
         pitchDetector.resetFilters()
 
-        if (_uiState.value.isListening) {
-            stopListening()
-        }
+        // Track key press time for microphone suppression (to ignore app audio)
+        lastVirtualKeyPressTime = System.currentTimeMillis()
+
         // 1. Play audio
         notePlayer.playNote(note)
         
-        // 2. Evaluate note for lesson progression (simulates a stable pitch detection)
-        evaluateNote(note, isStable = true)
+        // 2. Briefly show as detected note for visual feedback
+        // Note: We do NOT call evaluateNote here to ensure Reference Keyboard
+        // interactions do not advance lessons or mark progress.
+        _uiState.update { it.copy(detectedNote = note, isStablePitch = true) }
         
-        // 3. Briefly show as detected note for visual feedback
         viewModelScope.launch {
-            kotlinx.coroutines.delay(300)
+            kotlinx.coroutines.delay(500)
             _uiState.update { 
                 if (it.detectedNote == note) it.copy(detectedNote = null, isStablePitch = false)
                 else it
@@ -196,6 +201,11 @@ class PracticeViewModel @Inject constructor(
     }
 
     private fun evaluateNote(note: Note, isStable: Boolean) {
+        // Suppress microphone input if it's too close to a Reference Keyboard press or app audio
+        if (System.currentTimeMillis() - lastVirtualKeyPressTime < SUPPRESSION_WINDOW_MS) {
+            return
+        }
+
         _uiState.update { currentState ->
             var newCompletedNotes = currentState.completedNotes
             var newGuidedPractice = currentState.guidedPractice
@@ -291,6 +301,7 @@ class PracticeViewModel @Inject constructor(
     fun playTargetNote() {
         val target = _uiState.value.guidedPractice.targetNote
         if (target != null) {
+            lastVirtualKeyPressTime = System.currentTimeMillis()
             notePlayer.playNote(target)
         }
     }

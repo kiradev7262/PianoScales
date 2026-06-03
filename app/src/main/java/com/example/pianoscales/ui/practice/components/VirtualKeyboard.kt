@@ -23,7 +23,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun VirtualKeyboard(
+fun ReferenceKeyboard(
     onKeyClick: (Note) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -37,10 +37,16 @@ fun VirtualKeyboard(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Virtual Keyboard",
+                text = "Reference Keyboard",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
+            )
+            
+            Text(
+                text = "Tap any note to hear its sound and explore the keyboard layout.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextMuted
             )
             
             Spacer(modifier = Modifier.height(24.dp))

@@ -259,7 +259,7 @@ fun PracticeTabContent(
 
 
 
-        VirtualKeyboard(
+        ReferenceKeyboard(
             onKeyClick = { viewModel.onKeyClick(it) }
         )
 
