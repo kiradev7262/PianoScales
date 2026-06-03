@@ -153,70 +153,105 @@ class PracticeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             pitchDetector.startListening { note, frequency, volume, isStable ->
-                _uiState.update { currentState ->
-                    var newCompletedNotes = currentState.completedNotes
-                    var newGuidedPractice = currentState.guidedPractice
+                _uiState.update { it.copy(detectedFrequency = frequency, inputVolume = volume) }
+                if (isStable && note != null) {
+                    evaluateNote(note, isStable)
+                } else if (!isStable) {
+                    // Reset evaluation when pitch becomes unstable
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            detectedNote = null,
+                            isStablePitch = false,
+                            guidedPractice = if (currentState.guidedPractice.lastEvaluatedNote != null) {
+                                currentState.guidedPractice.copy(lastEvaluatedNote = null)
+                            } else currentState.guidedPractice
+                        )
+                    }
+                }
+            }
+        }
+    }
 
-                    if (isStable && note != null) {
-                        // Regular practice highlighting
-                        if (currentState.generatedNotes.contains(note)) {
-                            newCompletedNotes = currentState.completedNotes + note
-                        }
+    fun onKeyClick(note: Note) {
+        // 0. Reset pitch detector filters to avoid old note hold interference
+        pitchDetector.resetFilters()
 
-                        // Guided practice logic
-                        if (currentState.guidedPractice.isRunning && !currentState.guidedPractice.lessonCompleted) {
-                            // Only evaluate if this is a new stable note detection
-                            if (note != currentState.guidedPractice.lastEvaluatedNote) {
-                                val target = currentState.guidedPractice.targetNote
-                                if (target != null) {
-                                    if (note == target) {
-                                        // Correct note
-                                        val nextIndex = currentState.guidedPractice.currentIndex + 1
-                                        val isCompleted = nextIndex >= currentState.generatedNotes.size
-                                        val fingeringGuide = currentState.getCurrentFingeringGuide()
-                                        
-                                        newGuidedPractice = currentState.guidedPractice.copy(
-                                            currentIndex = nextIndex,
-                                            targetNote = if (isCompleted) null else currentState.generatedNotes.getOrNull(nextIndex),
-                                            targetFinger = if (isCompleted) null else fingeringGuide?.steps?.getOrNull(nextIndex)?.finger,
-                                            completedNotes = currentState.guidedPractice.completedNotes + currentState.guidedPractice.currentIndex,
-                                            lessonCompleted = isCompleted,
-                                            lastResult = PracticeResult.Correct(fingeringGuide?.steps?.getOrNull(currentState.guidedPractice.currentIndex)?.finger),
-                                            lastEvaluatedNote = note
-                                        )
-                                        
-                                        if (isCompleted) {
-                                            onLessonCompleted(currentState.rootNote, currentState.conceptType)
-                                        }
-                                    } else {
-                                        // Incorrect note
-                                        newGuidedPractice = currentState.guidedPractice.copy(
-                                            lastResult = PracticeResult.Incorrect(target, note),
-                                            lastEvaluatedNote = note
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Clear evaluated note when not stable or no note detected
-                        if (currentState.guidedPractice.lastEvaluatedNote != null) {
+        if (_uiState.value.isListening) {
+            stopListening()
+        }
+        // 1. Play audio
+        notePlayer.playNote(note)
+        
+        // 2. Evaluate note for lesson progression (simulates a stable pitch detection)
+        evaluateNote(note, isStable = true)
+        
+        // 3. Briefly show as detected note for visual feedback
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(300)
+            _uiState.update { 
+                if (it.detectedNote == note) it.copy(detectedNote = null, isStablePitch = false)
+                else it
+            }
+        }
+    }
+
+    private fun evaluateNote(note: Note, isStable: Boolean) {
+        _uiState.update { currentState ->
+            var newCompletedNotes = currentState.completedNotes
+            var newGuidedPractice = currentState.guidedPractice
+            val target = currentState.guidedPractice.targetNote
+
+            // Guided practice logic
+            if (currentState.guidedPractice.isRunning && !currentState.guidedPractice.lessonCompleted) {
+                // Only evaluate if this is a new stable note detection
+                if (note != currentState.guidedPractice.lastEvaluatedNote) {
+                    if (target != null) {
+                        if (note == target) {
+                            // Correct note
+                            val nextIndex = currentState.guidedPractice.currentIndex + 1
+                            val isCompleted = nextIndex >= currentState.generatedNotes.size
+                            val fingeringGuide = currentState.getCurrentFingeringGuide()
+
                             newGuidedPractice = currentState.guidedPractice.copy(
-                                lastEvaluatedNote = null
+                                currentIndex = nextIndex,
+                                targetNote = if (isCompleted) null else currentState.generatedNotes.getOrNull(nextIndex),
+                                targetFinger = if (isCompleted) null else fingeringGuide?.steps?.getOrNull(nextIndex)?.finger,
+                                completedNotes = currentState.guidedPractice.completedNotes + currentState.guidedPractice.currentIndex,
+                                lessonCompleted = isCompleted,
+                                lastResult = PracticeResult.Correct(fingeringGuide?.steps?.getOrNull(currentState.guidedPractice.currentIndex)?.finger),
+                                lastEvaluatedNote = note
+                            )
+
+                            // Also mark as completed in regular practice set for consistent visual progress
+                            if (currentState.generatedNotes.contains(note)) {
+                                newCompletedNotes = currentState.completedNotes + note
+                            }
+
+                            if (isCompleted) {
+                                onLessonCompleted(currentState.rootNote, currentState.conceptType)
+                            }
+                        } else {
+                            // Incorrect note - do NOT advance, do NOT add to completed notes
+                            newGuidedPractice = currentState.guidedPractice.copy(
+                                lastResult = PracticeResult.Incorrect(target, note),
+                                lastEvaluatedNote = note
                             )
                         }
                     }
-
-                    currentState.copy(
-                        detectedNote = note,
-                        detectedFrequency = if (note != null) frequency else 0f,
-                        inputVolume = volume,
-                        isStablePitch = isStable,
-                        completedNotes = newCompletedNotes,
-                        guidedPractice = newGuidedPractice
-                    )
+                }
+            } else if (!currentState.guidedPractice.isRunning) {
+                // Regular practice highlighting (only when guided practice is not active)
+                if (currentState.generatedNotes.contains(note)) {
+                    newCompletedNotes = currentState.completedNotes + note
                 }
             }
+
+            currentState.copy(
+                detectedNote = note,
+                isStablePitch = isStable,
+                completedNotes = newCompletedNotes,
+                guidedPractice = newGuidedPractice
+            )
         }
     }
 

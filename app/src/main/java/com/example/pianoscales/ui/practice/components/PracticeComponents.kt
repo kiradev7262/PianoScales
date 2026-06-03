@@ -358,6 +358,16 @@ fun GuidedPracticeCard(
                             tint = TextPrimary
                         )
                     }
+                }else if(state.lessonCompleted){
+                    IconButton(
+                        onClick = onReset
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Reset Lesson",
+                            tint = TextPrimary
+                        )
+                    }
                 }
 
             }
@@ -374,6 +384,7 @@ fun GuidedPracticeCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
             } else if (state.lessonCompleted) {
+                Spacer(modifier = Modifier.height(4.dp))
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -389,13 +400,8 @@ fun GuidedPracticeCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    ActionButtonCard(
-                        title = "Restart Lesson",
-                        icon = Icons.Default.Refresh,
-                        onClick = onReset
-                    )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

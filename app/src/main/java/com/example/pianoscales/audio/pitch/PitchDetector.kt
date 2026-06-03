@@ -146,7 +146,7 @@ class PitchDetector @Inject constructor() {
         return null
     }
 
-    private fun resetFilters() {
+    fun resetFilters() {
         consecutiveCount = 0
         consecutiveNote = null
         lastStableNote = null

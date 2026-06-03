@@ -157,12 +157,6 @@ fun PracticeTabContent(
 
         if (uiState.isListening) {
             VolumeMeter(amplitude = uiState.inputVolume)
-//            Spacer(modifier = Modifier.height(24.dp))
-//
-//            DetectedNoteDisplay(
-//                detectedNote = uiState.detectedNote,
-//                isStable = uiState.isStablePitch
-//            )
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -268,7 +262,8 @@ fun PracticeTabContent(
         VirtualKeyboard(
             targetNote = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.targetNote else null,
             detectedNote = if (uiState.isStablePitch) uiState.detectedNote else null,
-            playingNote = uiState.currentPlayingNote
+            playingNote = uiState.currentPlayingNote,
+            onKeyClick = { viewModel.onKeyClick(it) }
         )
 
 
