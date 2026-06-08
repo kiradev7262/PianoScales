@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
@@ -23,7 +24,8 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun JourneyNavHost() {
+    val navController = rememberNavController()
     NavHost(
         navController = navController,
         startDestination = Screen.NoteSelector.route

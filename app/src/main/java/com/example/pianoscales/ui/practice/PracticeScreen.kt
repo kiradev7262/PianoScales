@@ -59,6 +59,12 @@ fun PracticeScreen(
         viewModel.init(rootNote, conceptType)
     }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopListening()
+        }
+    }
+
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {

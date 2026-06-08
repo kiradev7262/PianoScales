@@ -325,7 +325,7 @@ class PracticeViewModel @Inject constructor(
         _uiState.update { it.copy(completedNotes = emptySet()) }
     }
 
-    private fun stopListening() {
+    fun stopListening() {
         pitchDetector.stopListening()
         _uiState.update { it.copy(isListening = false) }
     }
