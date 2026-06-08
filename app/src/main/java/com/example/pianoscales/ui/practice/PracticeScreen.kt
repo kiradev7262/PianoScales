@@ -45,7 +45,7 @@ fun PracticeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Practice", "Learn", "Theory")
+    val tabs = listOf("Theory", "Learn", "Practice")
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -111,9 +111,9 @@ fun PracticeScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             when (selectedTab) {
-                0 -> PracticeTabContent(uiState, viewModel, launcher)
+                0 -> TheoryTabContent(uiState, viewModel)
                 1 -> LearnTabContent(uiState, viewModel)
-                2 -> TheoryTabContent(uiState, viewModel)
+                2 -> PracticeTabContent(uiState, viewModel, launcher)
             }
             
             Spacer(modifier = Modifier.height(32.dp))
