@@ -11,7 +11,7 @@ class FreestyleViewModel @Inject constructor(
     private val notePlayer: NotePlayer
 ) : ViewModel() {
 
-    fun playNote(note: Note) {
-        notePlayer.playNote(note)
+    fun playNote(note: Note, octave: Int) {
+        notePlayer.playNote(note, octave)
     }
 }

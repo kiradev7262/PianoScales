@@ -65,7 +65,7 @@ fun FreestyleScreen(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     
-                    FreestylePiano(onNoteClick = { viewModel.playNote(it) })
+                    FreestylePiano(onNoteClick = { note, octave -> viewModel.playNote(note, octave) })
                 }
             }
             
@@ -81,7 +81,7 @@ fun FreestyleScreen(
 
 @Composable
 fun FreestylePiano(
-    onNoteClick: (Note) -> Unit
+    onNoteClick: (Note, Int) -> Unit
 ) {
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -93,33 +93,36 @@ fun FreestylePiano(
             .height(220.dp)
             .horizontalScroll(scrollState)
     ) {
-        val octaves = 2
+        val octavesCount = 2
         val whiteNotesPerOctave = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
-        val allWhiteNotes = List(octaves) { whiteNotesPerOctave }.flatten()
-        val whiteKeyWidth = 60.dp
         
         // White Keys
         Row(modifier = Modifier.fillMaxHeight()) {
-            allWhiteNotes.forEachIndexed { index, note ->
-                WhiteKey(
-                    note = note,
-                    isHighlighted = activeHighlights[index] == true,
-                    onClick = { 
-                        activeHighlights[index] = true
-                        coroutineScope.launch {
-                            delay(200)
-                            activeHighlights[index] = false
-                        }
-                        onNoteClick(note) 
-                    },
-                    modifier = Modifier
-                        .width(whiteKeyWidth)
-                        .fillMaxHeight()
-                )
+            for (octaveIdx in 0 until octavesCount) {
+                val octave = octaveIdx + 4
+                whiteNotesPerOctave.forEachIndexed { noteIdx, note ->
+                    val globalIndex = octaveIdx * 7 + noteIdx
+                    WhiteKey(
+                        note = note,
+                        isHighlighted = activeHighlights[globalIndex] == true,
+                        onClick = { 
+                            activeHighlights[globalIndex] = true
+                            coroutineScope.launch {
+                                delay(200)
+                                activeHighlights[globalIndex] = false
+                            }
+                            onNoteClick(note, octave) 
+                        },
+                        modifier = Modifier
+                            .width(60.dp)
+                            .fillMaxHeight()
+                    )
+                }
             }
         }
         
         // Black Keys
+        val whiteKeyWidth = 60.dp
         val blackKeyWidth = whiteKeyWidth * 0.65f
         val blackKeyHeight = 130.dp
         
@@ -131,10 +134,11 @@ fun FreestylePiano(
             Note.A_SHARP to 6f
         )
 
-        for (octave in 0 until octaves) {
+        for (octaveIdx in 0 until octavesCount) {
+            val octave = octaveIdx + 4
             blackKeyOffsets.forEach { (note, whiteKeyOffset) ->
-                val overallOffset = whiteKeyWidth * (octave * 7 + whiteKeyOffset) - (blackKeyWidth / 2)
-                val highlightKey = (octave + 1) * 100 + note.ordinal // Unique key for highlighting
+                val overallOffset = whiteKeyWidth * (octaveIdx * 7 + whiteKeyOffset) - (blackKeyWidth / 2)
+                val highlightKey = (octaveIdx + 1) * 100 + note.ordinal // Unique key for highlighting
                 
                 BlackKey(
                     note = note,
@@ -145,7 +149,7 @@ fun FreestylePiano(
                             delay(200)
                             activeHighlights[highlightKey] = false
                         }
-                        onNoteClick(note) 
+                        onNoteClick(note, octave)
                     },
                     modifier = Modifier
                         .offset(x = overallOffset)

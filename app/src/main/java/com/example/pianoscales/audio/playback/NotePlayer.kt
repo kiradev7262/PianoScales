@@ -23,7 +23,7 @@ class NotePlayer @Inject constructor(
         }
     }
 
-    fun playNote(note: Note) {
-        soundPoolManager.playNote(note)
+    fun playNote(note: Note, octave: Int = 4) {
+        soundPoolManager.playNote(note, octave)
     }
 }

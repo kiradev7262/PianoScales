@@ -21,14 +21,14 @@ class SoundPoolManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var loadedCount = 0
-    private var totalSounds = 12
+    private var totalSounds = 0
     private val _isLoaded = MutableStateFlow(false)
     val isLoaded = _isLoaded.asStateFlow()
 
     private val scope = CoroutineScope(Dispatchers.Main)
 
     private val soundPool: SoundPool = SoundPool.Builder()
-        .setMaxStreams(5)
+        .setMaxStreams(10) // Increased for multi-octave support
         .setAudioAttributes(
             AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -37,22 +37,19 @@ class SoundPoolManager @Inject constructor(
         )
         .build()
 
-    private val noteToSoundId = mutableMapOf<Note, Int>()
+    private val keyToSoundId = mutableMapOf<Pair<Note, Int>, Int>()
 
     init {
         soundPool.setOnLoadCompleteListener { _, sampleId, status ->
             if (status == 0) {
                 loadedCount++
-                Log.d("SoundPool", "Loaded sound $sampleId: $loadedCount/$totalSounds")
                 if (loadedCount >= totalSounds) {
                     scope.launch {
-                        delay(200) // Small delay to ensure SoundPool is ready
+                        delay(200)
                         _isLoaded.value = true
-                        Log.d("SoundPool", "All sounds loaded successfully")
+                        Log.d("SoundPool", "All $totalSounds sounds loaded successfully")
                     }
                 }
-            } else {
-                Log.e("SoundPool", "Error loading sound $sampleId: status $status")
             }
         }
         loadSounds()
@@ -60,48 +57,67 @@ class SoundPoolManager @Inject constructor(
 
     private fun loadSounds() {
         val notes = Note.entries
-        totalSounds = notes.size
-        notes.forEach { note ->
-            val resId = getResIdForNote(note)
-            if (resId != 0) {
-                val soundId = soundPool.load(context, resId, 1)
-                noteToSoundId[note] = soundId
-            } else {
-                Log.w("SoundPool", "Resource for $note not found")
+        val octaves = listOf(4, 5) // Loading octaves 4 and 5 for the piano
+        totalSounds = notes.size * octaves.size
+        
+        octaves.forEach { octave ->
+            notes.forEach { note ->
+                val resId = getResIdForNote(note, octave)
+                if (resId != 0) {
+                    val soundId = soundPool.load(context, resId, 1)
+                    keyToSoundId[note to octave] = soundId
+                } else {
+                    Log.w("SoundPool", "Resource for $note octave $octave not found")
+                    totalSounds-- // Adjust total if resource is missing
+                }
             }
         }
     }
 
-    private fun getResIdForNote(note: Note): Int {
-        val name = when (note) {
-            Note.C -> "c4"
-            Note.C_SHARP -> "cs4"
-            Note.D -> "d4"
-            Note.D_SHARP -> "ds4"
-            Note.E -> "e4"
-            Note.F -> "f4"
-            Note.F_SHARP -> "fs4"
-            Note.G -> "g4"
-            Note.G_SHARP -> "gs4"
-            Note.A -> "a4"
-            Note.A_SHARP -> "as4"
-            Note.B -> "b4"
+    private fun getResIdForNote(note: Note, octave: Int): Int {
+        val notePart = when (note) {
+            Note.C -> "c"
+            Note.C_SHARP -> "cs"
+            Note.D -> "d"
+            Note.D_SHARP -> "ds"
+            Note.E -> "e"
+            Note.F -> "f"
+            Note.F_SHARP -> "fs"
+            Note.G -> "g"
+            Note.G_SHARP -> "gs"
+            Note.A -> "a"
+            Note.A_SHARP -> "as"
+            Note.B -> "b"
         }
+        val name = "$notePart$octave"
         return context.resources.getIdentifier(name, "raw", context.packageName)
     }
 
-    fun playNote(note: Note) {
+    fun playNote(note: Note, octave: Int = 4) {
         if (!_isLoaded.value) {
-            Log.w("SoundPool", "Playback attempted before sounds loaded for note: $note")
+            Log.w("SoundPool", "Playback attempted before sounds loaded: $note $octave")
             return
         }
 
-        val soundId = noteToSoundId[note]
+        val soundId = keyToSoundId[note to octave]
+        
+        // [PIANO DEBUG - OCTAVE FIX]
+        val resId = getResIdForNote(note, octave)
+        val resName = if (resId != 0) context.resources.getResourceEntryName(resId) else "unknown"
+        
+        Log.d("PIANO DEBUG", """
+            [PIANO DEBUG - OCTAVE FIX]
+            Key: ${note.displayName}$octave
+            Note: ${note.name}
+            Octave: $octave
+            Mapped File: $resName.ogg
+            Resource ID: R.raw.$resName
+        """.trimIndent())
+
         if (soundId != null && soundId != 0) {
-            Log.d("SoundPool", "Playing note: $note (soundId: $soundId)")
             soundPool.play(soundId, 1f, 1f, 1, 0, 1f)
         } else {
-            Log.e("SoundPool", "Invalid soundId for note: $note")
+            Log.e("SoundPool", "Invalid soundId for note: $note octave: $octave")
         }
     }
 
