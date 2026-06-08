@@ -477,7 +477,10 @@ fun GuidedPracticeCard(
 }
 
 @Composable
-fun FingerLegendCard(modifier: Modifier = Modifier) {
+fun FingerLegendCard(
+    selectedHand: com.example.pianoscales.theory.fingering.Hand,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -485,48 +488,126 @@ fun FingerLegendCard(modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "Finger Legend",
+                text = "Finger Guide",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            val fingers = listOf(
-                "1" to "Thumb",
-                "2" to "Index",
-                "3" to "Middle",
-                "4" to "Ring",
-                "5" to "Pinky"
-            )
+            val isLeft = selectedHand == com.example.pianoscales.theory.fingering.Hand.LEFT
             
-            fingers.forEach { (num, name) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        modifier = Modifier.size(28.dp),
-                        shape = CircleShape,
-                        color = PrimaryAccent
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = num,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryBackground
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+            // Visual Hand Representation (Stylized)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                if (isLeft) {
+                    FingerItem("5", "Pinky", 50.dp)
+                    FingerItem("4", "Ring", 75.dp)
+                    FingerItem("3", "Middle", 90.dp)
+                    FingerItem("2", "Index", 80.dp)
+                    FingerItem("1", "Thumb", 45.dp)
+                } else {
+                    FingerItem("1", "Thumb", 45.dp)
+                    FingerItem("2", "Index", 80.dp)
+                    FingerItem("3", "Middle", 90.dp)
+                    FingerItem("4", "Ring", 75.dp)
+                    FingerItem("5", "Pinky", 50.dp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FingerItem(number: String, name: String, height: androidx.compose.ui.unit.Dp) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        Text(
+            text = name, 
+            style = MaterialTheme.typography.labelSmall, 
+            color = TextMuted, 
+            fontSize = 9.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .width(36.dp)
+                .height(height)
+                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                .background(PrimaryAccent.copy(alpha = 0.15f))
+                .border(
+                    width = 1.dp, 
+                    color = PrimaryAccent.copy(alpha = 0.4f), 
+                    shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
+                ),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = PrimaryAccent,
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .size(22.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        text = number, 
+                        style = MaterialTheme.typography.labelSmall, 
+                        fontWeight = FontWeight.Bold, 
+                        color = PrimaryBackground
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HandToggle(
+    selectedHand: com.example.pianoscales.theory.fingering.Hand,
+    onHandSelected: (com.example.pianoscales.theory.fingering.Hand) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = ElevatedSurface
+    ) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            com.example.pianoscales.theory.fingering.Hand.entries.reversed().forEach { hand ->
+                val isSelected = selectedHand == hand
+                val backgroundColor by animateColorAsState(
+                    targetValue = if (isSelected) PrimaryAccent else Color.Transparent,
+                    label = "HandToggleBackground"
+                )
+                val contentColor by animateColorAsState(
+                    targetValue = if (isSelected) PrimaryBackground else TextSecondary,
+                    label = "HandToggleContent"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(2.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(backgroundColor)
+                        .clickable { onHandSelected(hand) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = hand.displayName,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor
                     )
                 }
             }

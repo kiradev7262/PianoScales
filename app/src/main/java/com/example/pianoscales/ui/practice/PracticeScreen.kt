@@ -281,36 +281,15 @@ fun LearnTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
             .padding(horizontal = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PracticeTheoryCard(title = "Hand Position") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                com.example.pianoscales.theory.fingering.Hand.entries.forEach { hand ->
-                    val isSelected = uiState.selectedHand == hand
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .clickable { viewModel.toggleHand(hand) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) PrimaryAccent else ElevatedSurface
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = hand.name.lowercase().replaceFirstChar { it.uppercase() },
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSelected) PrimaryBackground else TextSecondary
-                            )
-                        }
-                    }
-                }
-            }
+        PracticeTheoryCard(title = "Hand Selection") {
+            HandToggle(
+                selectedHand = uiState.selectedHand,
+                onHandSelected = { viewModel.toggleHand(it) }
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        FingerLegendCard()
+        FingerLegendCard(selectedHand = uiState.selectedHand)
         
         Spacer(modifier = Modifier.height(24.dp))
         
