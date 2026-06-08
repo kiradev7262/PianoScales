@@ -57,7 +57,7 @@ class SoundPoolManager @Inject constructor(
 
     private fun loadSounds() {
         val notes = Note.entries
-        val octaves = listOf(4, 5) // Loading octaves 4 and 5 for the piano
+        val octaves = listOf(3, 4, 5, 6, 7) // Full range C3 - C7
         totalSounds = notes.size * octaves.size
         
         octaves.forEach { octave ->
@@ -68,7 +68,7 @@ class SoundPoolManager @Inject constructor(
                     keyToSoundId[note to octave] = soundId
                 } else {
                     Log.w("SoundPool", "Resource for $note octave $octave not found")
-                    totalSounds-- // Adjust total if resource is missing
+                    totalSounds--
                 }
             }
         }
@@ -101,14 +101,14 @@ class SoundPoolManager @Inject constructor(
 
         val soundId = keyToSoundId[note to octave]
         
-        // [PIANO DEBUG - OCTAVE FIX]
+        // [PIANO DEBUG - MULTI OCTAVE]
         val resId = getResIdForNote(note, octave)
         val resName = if (resId != 0) context.resources.getResourceEntryName(resId) else "unknown"
         
         Log.d("PIANO DEBUG", """
-            [PIANO DEBUG - OCTAVE FIX]
+            [PIANO DEBUG - MULTI OCTAVE]
             Key: ${note.displayName}$octave
-            Note: ${note.name}
+            Note: ${note.displayName}
             Octave: $octave
             Mapped File: $resName.ogg
             Resource ID: R.raw.$resName

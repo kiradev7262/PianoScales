@@ -25,6 +25,8 @@ import com.example.pianoscales.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+data class PianoKey(val note: Note, val octave: Int)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FreestyleScreen(
@@ -59,7 +61,7 @@ fun FreestyleScreen(
                         color = TextPrimary
                     )
                     Text(
-                        text = "Explore two octaves of the piano. Tap any key to play.",
+                        text = "Explore five octaves (C3-C7). Swipe horizontally to move.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextMuted
                     )
@@ -72,8 +74,8 @@ fun FreestyleScreen(
             Spacer(modifier = Modifier.height(24.dp))
             
             InfoCard(
-                title = "Freestyle Mode",
-                description = "This is a non-learning mode where you can experiment with sounds. Your progress in Journey mode is not affected by anything you play here."
+                title = "Multi-Octave Range",
+                description = "Navigate from C3 to C7. Each octave is visually distinct and fully playable."
             )
         }
     }
@@ -85,69 +87,78 @@ fun FreestylePiano(
 ) {
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
-    val activeHighlights = remember { mutableStateMapOf<Int, Boolean>() } // Using index as key to support multiple octaves
+    val activeHighlights = remember { mutableStateMapOf<String, Boolean>() }
+    
+    val whiteKeyWidth = 60.dp
+    val blackKeyWidth = whiteKeyWidth * 0.65f
+    val blackKeyHeight = 130.dp
+    
+    val octaves = listOf(3, 4, 5, 6, 7)
+    val whiteNotesPerOctave = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
+    val blackKeyOffsets = listOf(
+        Note.C_SHARP to 1f,
+        Note.D_SHARP to 2f,
+        Note.F_SHARP to 4f,
+        Note.G_SHARP to 5f,
+        Note.A_SHARP to 6f
+    )
+
+    // Calculate center scroll position (Middle of C4-C5 range)
+    LaunchedEffect(Unit) {
+        val totalWidth = (octaves.size * 7 * whiteKeyWidth.value).dp
+        // Scroll to approx C4 (Octave 4 start)
+        val scrollTarget = (1 * 7 * whiteKeyWidth.value).dp // 1 full octave (3) before octave 4
+        scrollState.scrollTo((scrollTarget.value * 2.5).toInt()) // Approximate centering
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .height(240.dp)
             .horizontalScroll(scrollState)
     ) {
-        val octavesCount = 2
-        val whiteNotesPerOctave = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
-        
         // White Keys
         Row(modifier = Modifier.fillMaxHeight()) {
-            for (octaveIdx in 0 until octavesCount) {
-                val octave = octaveIdx + 4
-                whiteNotesPerOctave.forEachIndexed { noteIdx, note ->
-                    val globalIndex = octaveIdx * 7 + noteIdx
+            octaves.forEach { octave ->
+                whiteNotesPerOctave.forEach { note ->
+                    val keyId = "${note.name}$octave"
                     WhiteKey(
                         note = note,
-                        isHighlighted = activeHighlights[globalIndex] == true,
+                        octave = octave,
+                        isHighlighted = activeHighlights[keyId] == true,
                         onClick = { 
-                            activeHighlights[globalIndex] = true
+                            activeHighlights[keyId] = true
                             coroutineScope.launch {
                                 delay(200)
-                                activeHighlights[globalIndex] = false
+                                activeHighlights[keyId] = false
                             }
                             onNoteClick(note, octave) 
                         },
                         modifier = Modifier
-                            .width(60.dp)
+                            .width(whiteKeyWidth)
                             .fillMaxHeight()
                     )
                 }
             }
+            // Add final C8 or just stop at C7. The request said C3-C7 inclusive.
+            // Note: If we end at B7, C7 is the last C.
         }
         
         // Black Keys
-        val whiteKeyWidth = 60.dp
-        val blackKeyWidth = whiteKeyWidth * 0.65f
-        val blackKeyHeight = 130.dp
-        
-        val blackKeyOffsets = listOf(
-            Note.C_SHARP to 1f,
-            Note.D_SHARP to 2f,
-            Note.F_SHARP to 4f,
-            Note.G_SHARP to 5f,
-            Note.A_SHARP to 6f
-        )
-
-        for (octaveIdx in 0 until octavesCount) {
-            val octave = octaveIdx + 4
+        octaves.forEachIndexed { octaveIdx, octave ->
             blackKeyOffsets.forEach { (note, whiteKeyOffset) ->
                 val overallOffset = whiteKeyWidth * (octaveIdx * 7 + whiteKeyOffset) - (blackKeyWidth / 2)
-                val highlightKey = (octaveIdx + 1) * 100 + note.ordinal // Unique key for highlighting
+                val keyId = "${note.name}$octave"
                 
                 BlackKey(
                     note = note,
-                    isHighlighted = activeHighlights[highlightKey] == true,
+                    octave = octave,
+                    isHighlighted = activeHighlights[keyId] == true,
                     onClick = { 
-                        activeHighlights[highlightKey] = true
+                        activeHighlights[keyId] = true
                         coroutineScope.launch {
                             delay(200)
-                            activeHighlights[highlightKey] = false
+                            activeHighlights[keyId] = false
                         }
                         onNoteClick(note, octave)
                     },
@@ -164,6 +175,7 @@ fun FreestylePiano(
 @Composable
 private fun WhiteKey(
     note: Note,
+    octave: Int,
     isHighlighted: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -182,8 +194,8 @@ private fun WhiteKey(
         contentAlignment = Alignment.BottomCenter
     ) {
         Text(
-            text = note.displayName.lowercase(),
-            style = MaterialTheme.typography.titleMedium,
+            text = "${note.displayName}$octave",
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = if (isHighlighted) PrimaryBackground else TextMuted,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -194,6 +206,7 @@ private fun WhiteKey(
 @Composable
 private fun BlackKey(
     note: Note,
+    octave: Int,
     isHighlighted: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -210,8 +223,8 @@ private fun BlackKey(
         contentAlignment = Alignment.BottomCenter
     ) {
         Text(
-            text = note.displayName.lowercase(),
-            style = MaterialTheme.typography.labelMedium,
+            text = "${note.displayName}$octave",
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = if (isHighlighted) PrimaryBackground else TextMuted.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp)
