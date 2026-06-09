@@ -54,7 +54,24 @@ fun PracticeScreen(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            viewModel.toggleListening()
+            android.util.Log.d("MIC DEBUG", "Permission Granted\nStarting Guided Session Listening Engine")
+            uiState.pendingActionAfterPermission?.invoke()
+        } else {
+            android.util.Log.d("MIC DEBUG", "Permission Denied")
+        }
+    }
+
+    fun checkAndRun(entryPoint: String, action: () -> Unit) {
+        when (PackageManager.PERMISSION_GRANTED) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) -> {
+                android.util.Log.d("MIC DEBUG", "Entry Point: $entryPoint\nPermission Status: GRANTED")
+                action()
+            }
+            else -> {
+                android.util.Log.d("MIC DEBUG", "Entry Point: $entryPoint\nPermission Status: NOT_GRANTED\nRequesting Permission...")
+                viewModel.setPendingAction(action)
+                launcher.launch(Manifest.permission.RECORD_AUDIO)
+            }
         }
     }
 
@@ -116,7 +133,9 @@ fun PracticeScreen(
             when (selectedTab) {
                 0 -> TheoryTabContent(uiState, viewModel)
                 1 -> LearnTabContent(uiState, viewModel)
-                2 -> PracticeTabContent(uiState, viewModel, launcher)
+                2 -> PracticeTabContent(uiState, viewModel) { entryPoint, action ->
+                    checkAndRun(entryPoint, action)
+                }
             }
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -143,7 +162,7 @@ fun PracticeScreen(
 fun PracticeTabContent(
     uiState: PracticeUiState,
     viewModel: PracticeViewModel,
-    launcher: androidx.activity.result.ActivityResultLauncher<String>
+    checkAndRun: (String, () -> Unit) -> Unit
 ) {
     val context = LocalContext.current
     
@@ -194,16 +213,10 @@ fun PracticeTabContent(
                     title = if (uiState.isListening) "Stop" else "Listen",
                     icon = if (uiState.isListening) Icons.Default.Close else Icons.Default.Info,
                     onClick = {
-                        when (PackageManager.PERMISSION_GRANTED) {
-                            ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.RECORD_AUDIO
-                            ) -> {
-                                viewModel.toggleListening()
-                            }
-                            else -> {
-                                launcher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
+                        if (uiState.isListening) {
+                            viewModel.toggleListening()
+                        } else {
+                            checkAndRun("Manual Listen") { viewModel.startListeningWithPermission() }
                         }
                     },
                     modifier = Modifier.weight(1f),
@@ -299,8 +312,8 @@ fun PracticeTabContent(
         GuidedPracticeCard(
             state = uiState.guidedPractice,
             totalNotes = uiState.generatedNotes.size,
-            onStart = { viewModel.startGuidedPractice() },
-            onReset = { viewModel.startGuidedPractice() },
+            onStart = { checkAndRun("Guided Session") { viewModel.startGuidedPracticeWithPermission() } },
+            onReset = { checkAndRun("Guided Session") { viewModel.startGuidedPracticeWithPermission() } },
             onCancel = { viewModel.stopGuidedPractice() },
             onPlayTarget = { viewModel.playTargetNote() }
         )

@@ -40,7 +40,8 @@ data class PracticeUiState(
     val isTheoryExpanded: Boolean = false,
     val guidedPractice: GuidedPracticeState = GuidedPracticeState(),
     val isLessonAlreadyCompleted: Boolean = false,
-    val showFirstTimeCompletion: Boolean = false
+    val showFirstTimeCompletion: Boolean = false,
+    val pendingActionAfterPermission: (() -> Unit)? = null
 ) {
     fun getCurrentFingeringGuide(): FingeringGuide? {
         return theoryExplanation?.fingeringGuides?.find { it.hand == selectedHand }
@@ -149,6 +150,11 @@ class PracticeViewModel @Inject constructor(
         } else {
             startListening()
         }
+    }
+
+    fun startListeningWithPermission() {
+        _uiState.update { it.copy(pendingActionAfterPermission = null) }
+        startListening()
     }
 
     private fun startListening() {
@@ -290,10 +296,16 @@ class PracticeViewModel @Inject constructor(
                 )
             )
         }
-        // Auto-start listening if not already
-        if (!_uiState.value.isListening) {
-            startListening()
-        }
+    }
+
+    fun startGuidedPracticeWithPermission() {
+        _uiState.update { it.copy(pendingActionAfterPermission = null) }
+        startGuidedPractice()
+        startListening()
+    }
+
+    fun setPendingAction(action: () -> Unit) {
+        _uiState.update { it.copy(pendingActionAfterPermission = action) }
     }
 
     fun stopGuidedPractice() {
