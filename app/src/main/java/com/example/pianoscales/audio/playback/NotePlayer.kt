@@ -16,9 +16,27 @@ class NotePlayer @Inject constructor(
         delayMs: Long = 500L,
         onNoteStarted: (Note) -> Unit = {}
     ) {
-        notes.forEach { note ->
+        var currentOctave = 4
+        var lastNoteOrdinal = -1
+
+        notes.forEachIndexed { index, note ->
+            if (index > 0 && note.ordinal <= lastNoteOrdinal) {
+                currentOctave++
+            }
+            lastNoteOrdinal = note.ordinal
+
+            // [PLAYBACK DEBUG]
+            val noteFilePart = note.getFilePart()
+            android.util.Log.d("PLAYBACK DEBUG", """
+                [PLAYBACK DEBUG]
+                Note: ${note.displayName}
+                Octave: $currentOctave
+                File: $noteFilePart$currentOctave.ogg
+                Index: ${index + 1}
+            """.trimIndent())
+
             onNoteStarted(note)
-            playNote(note)
+            playNote(note, currentOctave)
             delay(delayMs)
         }
     }

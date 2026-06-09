@@ -75,20 +75,7 @@ class SoundPoolManager @Inject constructor(
     }
 
     private fun getResIdForNote(note: Note, octave: Int): Int {
-        val notePart = when (note) {
-            Note.C -> "c"
-            Note.C_SHARP -> "cs"
-            Note.D -> "d"
-            Note.D_SHARP -> "ds"
-            Note.E -> "e"
-            Note.F -> "f"
-            Note.F_SHARP -> "fs"
-            Note.G -> "g"
-            Note.G_SHARP -> "gs"
-            Note.A -> "a"
-            Note.A_SHARP -> "as"
-            Note.B -> "b"
-        }
+        val notePart = note.getFilePart()
         val name = "$notePart$octave"
         return context.resources.getIdentifier(name, "raw", context.packageName)
     }

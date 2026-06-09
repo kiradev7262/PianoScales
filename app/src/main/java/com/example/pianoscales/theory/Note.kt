@@ -14,6 +14,23 @@ enum class Note(val displayName: String) {
     A_SHARP("A#"),
     B("B");
 
+    fun getFilePart(): String {
+        return when (this) {
+            C -> "c"
+            C_SHARP -> "cs"
+            D -> "d"
+            D_SHARP -> "ds"
+            E -> "e"
+            F -> "f"
+            F_SHARP -> "fs"
+            G -> "g"
+            G_SHARP -> "gs"
+            A -> "a"
+            A_SHARP -> "as"
+            B -> "b"
+        }
+    }
+
     companion object {
         fun fromString(name: String): Note? = entries.find { it.name == name || it.displayName == name }
     }

@@ -32,7 +32,7 @@ data class PracticeUiState(
     val inputVolume: Float = 0f,
     val isAudioLoaded: Boolean = false,
     val completedNotes: Set<Note> = emptySet(),
-    val includeOctave: Boolean = false,
+    val includeOctave: Boolean = true,
     val selectedHand: Hand = Hand.RIGHT,
     val theoryExplanation: TheoryExplanation? = null,
     val isTheoryExpanded: Boolean = false,
@@ -300,9 +300,27 @@ class PracticeViewModel @Inject constructor(
 
     fun playTargetNote() {
         val target = _uiState.value.guidedPractice.targetNote
+        val currentIndex = _uiState.value.guidedPractice.currentIndex
+        val notes = _uiState.value.generatedNotes
+        
         if (target != null) {
+            var octave = 4
+            // Calculate octave if target is part of the current scale at the current index
+            if (currentIndex < notes.size && notes[currentIndex] == target) {
+                var lastNoteOrdinal = -1
+                var currentOctave = 4
+                for (i in 0..currentIndex) {
+                    val note = notes[i]
+                    if (i > 0 && note.ordinal <= lastNoteOrdinal) {
+                        currentOctave++
+                    }
+                    lastNoteOrdinal = note.ordinal
+                }
+                octave = currentOctave
+            }
+            
             lastVirtualKeyPressTime = System.currentTimeMillis()
-            notePlayer.playNote(target)
+            notePlayer.playNote(target, octave)
         }
     }
 
