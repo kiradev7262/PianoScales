@@ -8,6 +8,9 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -215,15 +218,57 @@ fun PracticeTabContent(
         Spacer(modifier = Modifier.height(16.dp))
         
         val fingeringGuide = uiState.getCurrentFingeringGuide()
+        val lazyListState = rememberLazyListState()
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        // Auto-scroll logic
+        LaunchedEffect(uiState.currentPlayingIndex, uiState.guidedPractice.currentIndex) {
+            val indexToScroll = if (uiState.guidedPractice.isRunning) {
+                uiState.guidedPractice.currentIndex
+            } else if (uiState.isPlaying) {
+                uiState.currentPlayingIndex
+            } else {
+                -1
+            }
+
+            if (indexToScroll != -1) {
+                val activeNote = uiState.generatedNotes.getOrNull(indexToScroll)
+                val octave = if (uiState.isPlaying) {
+                    uiState.currentPlayingOctave
+                } else {
+                    // Calculate octave for guided practice
+                    var lastNoteOrdinal = -1
+                    var currentOctave = 4
+                    for (i in 0..indexToScroll) {
+                        val note = uiState.generatedNotes[i]
+                        if (i > 0 && note.ordinal <= lastNoteOrdinal) {
+                            currentOctave++
+                        }
+                        lastNoteOrdinal = note.ordinal
+                    }
+                    currentOctave
+                }
+
+                android.util.Log.d("SCROLL DEBUG", """
+                    [SCROLL DEBUG]
+                    Active Note: ${activeNote?.displayName}$octave
+                    Index: ${indexToScroll + 1}
+                    Scroll Trigger: TRUE
+                    Action: SmoothScrollToItem
+                """.trimIndent())
+                
+                // Predictive scroll: scroll to a position that keeps the active note visible and somewhat centered
+                val targetScrollIndex = (indexToScroll - 1).coerceAtLeast(0)
+                lazyListState.animateScrollToItem(targetScrollIndex)
+            }
+        }
+
+        LazyRow(
+            state = lazyListState,
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            uiState.generatedNotes.forEachIndexed { index, note ->
+            itemsIndexed(uiState.generatedNotes) { index, note ->
                 val isCompleted = if (uiState.guidedPractice.isRunning) {
                     uiState.guidedPractice.completedNotes.contains(index)
                 } else {

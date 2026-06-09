@@ -25,6 +25,8 @@ data class PracticeUiState(
     val generatedNotes: List<Note> = emptyList(),
     val isPlaying: Boolean = false,
     val currentPlayingNote: Note? = null,
+    val currentPlayingIndex: Int = -1,
+    val currentPlayingOctave: Int = 4,
     val isListening: Boolean = false,
     val detectedNote: Note? = null,
     val detectedFrequency: Float = 0f,
@@ -126,12 +128,18 @@ class PracticeViewModel @Inject constructor(
             _uiState.update { it.copy(isPlaying = true) }
             notePlayer.playSequence(
                 notes = _uiState.value.generatedNotes,
-                onNoteStarted = { note ->
+                onNoteStarted = { index, note, octave ->
                     lastVirtualKeyPressTime = System.currentTimeMillis()
-                    _uiState.update { it.copy(currentPlayingNote = note) }
+                    _uiState.update { 
+                        it.copy(
+                            currentPlayingNote = note,
+                            currentPlayingIndex = index,
+                            currentPlayingOctave = octave
+                        ) 
+                    }
                 }
             )
-            _uiState.update { it.copy(isPlaying = false, currentPlayingNote = null) }
+            _uiState.update { it.copy(isPlaying = false, currentPlayingNote = null, currentPlayingIndex = -1) }
         }
     }
 

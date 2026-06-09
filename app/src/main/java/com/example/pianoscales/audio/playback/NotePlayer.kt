@@ -14,7 +14,7 @@ class NotePlayer @Inject constructor(
     suspend fun playSequence(
         notes: List<Note>,
         delayMs: Long = 500L,
-        onNoteStarted: (Note) -> Unit = {}
+        onNoteStarted: (Int, Note, Int) -> Unit = { _, _, _ -> }
     ) {
         var currentOctave = 4
         var lastNoteOrdinal = -1
@@ -35,7 +35,7 @@ class NotePlayer @Inject constructor(
                 Index: ${index + 1}
             """.trimIndent())
 
-            onNoteStarted(note)
+            onNoteStarted(index, note, currentOctave)
             playNote(note, currentOctave)
             delay(delayMs)
         }
