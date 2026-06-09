@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -14,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.pianoscales.audio_intelligence.AudioIntelligenceNavHost
 import com.example.pianoscales.navigation.JourneyNavHost
 import com.example.pianoscales.ui.freestyle.FreestyleScreen
 import com.example.pianoscales.ui.theme.CardSurface
@@ -24,6 +26,7 @@ import com.example.pianoscales.ui.theme.TextPrimary
 sealed class BottomNavScreen(val route: String, val label: String, val icon: ImageVector) {
     object Journey : BottomNavScreen("journey_root", "Journey", Icons.Default.Home)
     object Freestyle : BottomNavScreen("freestyle_root", "Freestyle", Icons.Default.PlayArrow)
+    object AudioIntelligence : BottomNavScreen("audio_intelligence_root", "Audio AI", Icons.Default.Star)
 }
 
 @Composable
@@ -31,7 +34,8 @@ fun MainScreen() {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavScreen.Journey,
-        BottomNavScreen.Freestyle
+        BottomNavScreen.Freestyle,
+        BottomNavScreen.AudioIntelligence
     )
 
     Scaffold(
@@ -78,6 +82,9 @@ fun MainScreen() {
             }
             composable(BottomNavScreen.Freestyle.route) {
                 FreestyleScreen()
+            }
+            composable(BottomNavScreen.AudioIntelligence.route) {
+                AudioIntelligenceNavHost()
             }
         }
     }
