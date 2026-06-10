@@ -1,5 +1,7 @@
 package com.example.pianoscales.ui
 
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -9,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -38,36 +42,43 @@ fun MainScreen() {
         BottomNavScreen.AudioIntelligence
     )
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isFreestyle = currentDestination?.hierarchy?.any { it.route == BottomNavScreen.Freestyle.route } == true
+    val showBottomBar = !(isLandscape && isFreestyle)
+
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = CardSurface,
-                contentColor = PrimaryAccent
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                items.forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = null) },
-                        label = { Text(screen.label) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            if (showBottomBar) {
+                NavigationBar(
+                    containerColor = CardSurface,
+                    contentColor = PrimaryAccent
+                ) {
+                    items.forEach { screen ->
+                        NavigationBarItem(
+                            icon = { Icon(screen.icon, contentDescription = null) },
+                            label = { Text(screen.label) },
+                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = PrimaryAccent,
-                            selectedTextColor = PrimaryAccent,
-                            unselectedIconColor = TextMuted,
-                            unselectedTextColor = TextMuted,
-                            indicatorColor = PrimaryAccent.copy(alpha = 0.1f)
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = PrimaryAccent,
+                                selectedTextColor = PrimaryAccent,
+                                unselectedIconColor = TextMuted,
+                                unselectedTextColor = TextMuted,
+                                indicatorColor = PrimaryAccent.copy(alpha = 0.1f)
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -75,7 +86,7 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = BottomNavScreen.Journey.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(if (showBottomBar) innerPadding else PaddingValues(0.dp))
         ) {
             composable(BottomNavScreen.Journey.route) {
                 JourneyNavHost()

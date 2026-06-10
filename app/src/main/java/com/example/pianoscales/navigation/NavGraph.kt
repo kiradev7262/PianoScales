@@ -10,11 +10,13 @@ import androidx.navigation.navArgument
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.ui.concepts.ConceptSelectorScreen
+import com.example.pianoscales.ui.education.BeginnerJourneyScreen
 import com.example.pianoscales.ui.notes.NoteSelectorScreen
 import com.example.pianoscales.ui.practice.PracticeScreen
 
 sealed class Screen(val route: String) {
     object NoteSelector : Screen("notes_screen")
+    object BeginnerJourney : Screen("beginner_journey")
     object ConceptSelector : Screen("concept_screen/{note}") {
         fun createRoute(note: Note) = "concept_screen/${note.name}"
     }
@@ -37,6 +39,17 @@ fun JourneyNavHost() {
                 },
                 onContinueLesson = { note, concept ->
                     navController.navigate(Screen.Practice.createRoute(note, concept))
+                },
+                onStartBeginnerJourney = {
+                    navController.navigate(Screen.BeginnerJourney.route)
+                }
+            )
+        }
+        composable(Screen.BeginnerJourney.route) {
+            BeginnerJourneyScreen(
+                onBack = { navController.popBackStack() },
+                onStartLesson = { lessonId ->
+                    // Currently just a placeholder, but could navigate to specific beginner content
                 }
             )
         }

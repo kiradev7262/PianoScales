@@ -3,10 +3,10 @@ package com.example.pianoscales.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Background Colors
-val PrimaryBackground = Color(0xFF071226)
+val PrimaryBackground = Color(0xFF040815) // Deep, rich dark background
 val SurfaceColor = Color(0xFF0F172A)
 val CardSurface = Color(0xFF13203A)
-val ElevatedSurface = Color(0xFF172447)
+val ElevatedSurface = Color(0xFF1E2D4D) // More distinct elevation
 
 // Accent Colors
 val PrimaryAccent = Color(0xFF38BDF8)

@@ -50,7 +50,8 @@ import java.io.FileOutputStream
 fun NoteSelectorScreen(
     viewModel: NoteSelectorViewModel = hiltViewModel(),
     onNoteSelected: (Note) -> Unit,
-    onContinueLesson: (Note, ConceptType) -> Unit = { _, _ -> }
+    onContinueLesson: (Note, ConceptType) -> Unit = { _, _ -> },
+    onStartBeginnerJourney: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -137,6 +138,13 @@ fun NoteSelectorScreen(
                 DashboardHeader()
             }
 
+            // Beginner Onboarding Card
+            item(span = { GridItemSpan(2) }) {
+                BeginnerOnboardingCard(
+                    onStartJourney = onStartBeginnerJourney
+                )
+            }
+
             // Global Progress Card
             item(span = { GridItemSpan(2) }) {
                 val masteredNotes = uiState.noteProgress.values.count { it.completedLessons == it.totalLessons && it.totalLessons > 0 }
@@ -211,6 +219,59 @@ fun NoteSelectorScreen(
             item(span = { GridItemSpan(2) }) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun BeginnerOnboardingCard(onStartJourney: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = PrimaryAccent.copy(alpha = 0.15f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "👋 New to Music?",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = PrimaryAccent,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Learn notes, scales, and basic music theory in a beginner-friendly order.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary.copy(alpha = 0.9f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onStartJourney,
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
+                ) {
+                    Text("Start Beginner Journey", color = PrimaryBackground, fontWeight = FontWeight.Bold)
+                }
+            }
+            
+            // Decorative element
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = PrimaryAccent.copy(alpha = 0.2f),
+                modifier = Modifier.size(80.dp)
+            )
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.example.pianoscales.ui.freestyle
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
@@ -32,58 +34,101 @@ data class PianoKey(val note: Note, val octave: Int)
 fun FreestyleScreen(
     viewModel: FreestyleViewModel = hiltViewModel()
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {
-            TopAppBar(
-                title = { Text("Freestyle Playground", color = TextPrimary) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
-            )
+            if (!isLandscape) {
+                TopAppBar(
+                    title = { Text("Freestyle Playground", color = TextPrimary) },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
+                )
+            }
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+                .padding(if (isLandscape) PaddingValues(0.dp) else padding)
+                .padding(if (isLandscape) 8.dp else 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = CardSurface)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+            if (isLandscape) {
+                // Mini header for landscape to save space
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "Piano Explorer",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                     Text(
-                        text = "Explore five octaves (C3-C7). Swipe horizontally to move.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
+                        text = "C3 - C7",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = PrimaryAccent
                     )
-                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { if (isLandscape) it.weight(1f) else it },
+                shape = RoundedCornerShape(if (isLandscape) 16.dp else 24.dp),
+                colors = CardDefaults.cardColors(containerColor = CardSurface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(if (isLandscape) 12.dp else 20.dp)
+                        .fillMaxHeight(),
+                    verticalArrangement = if (isLandscape) Arrangement.Center else Arrangement.Top
+                ) {
+                    if (!isLandscape) {
+                        Text(
+                            text = "Piano Explorer",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Explore five octaves (C3-C7). Swipe horizontally to move.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
                     
-                    FreestylePiano(onNoteClick = { note, octave -> viewModel.playNote(note, octave) })
+                    FreestylePiano(
+                        onNoteClick = { note, octave -> viewModel.playNote(note, octave) },
+                        height = if (isLandscape) 280.dp else 240.dp
+                    )
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            InfoCard(
-                title = "Multi-Octave Range",
-                description = "Navigate from C3 to C7. Each octave is visually distinct and fully playable."
-            )
+            if (!isLandscape) {
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                InfoCard(
+                    title = "Multi-Octave Range",
+                    description = "Navigate from C3 to C7. Each octave is visually distinct and fully playable."
+                )
+            }
         }
     }
 }
 
 @Composable
 fun FreestylePiano(
-    onNoteClick: (Note, Int) -> Unit
+    onNoteClick: (Note, Int) -> Unit,
+    height: androidx.compose.ui.unit.Dp = 240.dp
 ) {
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
@@ -91,7 +136,7 @@ fun FreestylePiano(
     
     val whiteKeyWidth = 60.dp
     val blackKeyWidth = whiteKeyWidth * 0.65f
-    val blackKeyHeight = 130.dp
+    val blackKeyHeight = height * 0.55f
     
     val octaves = listOf(3, 4, 5, 6, 7)
     val whiteNotesPerOctave = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
@@ -105,7 +150,6 @@ fun FreestylePiano(
 
     // Calculate center scroll position (Middle of C4-C5 range)
     LaunchedEffect(Unit) {
-        val totalWidth = (octaves.size * 7 * whiteKeyWidth.value).dp
         // Scroll to approx C4 (Octave 4 start)
         val scrollTarget = (1 * 7 * whiteKeyWidth.value).dp // 1 full octave (3) before octave 4
         scrollState.scrollTo((scrollTarget.value * 2.5).toInt()) // Approximate centering
@@ -114,7 +158,7 @@ fun FreestylePiano(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp)
+            .height(height)
             .horizontalScroll(scrollState)
     ) {
         // White Keys
