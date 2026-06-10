@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
@@ -91,7 +93,7 @@ fun LessonContentScreen(
                         viewModel.completeLesson(4)
                         onLessonComplete()
                     },
-                    playDemo = { viewModel.playScaleDemo() }
+                    playDemo = { notes -> viewModel.playScaleDemo(notes) }
                 )
                 5 -> Lesson5Content(
                     onComplete = { 
@@ -184,7 +186,18 @@ private fun NoteChip(note: String, isTapped: Boolean, onClick: () -> Unit) {
 private fun Lesson2Content(onComplete: () -> Unit, playNote: (String) -> Unit) {
     val targetSequence = listOf("C", "D", "E", "F", "G", "A", "B", "C")
     var currentSequence by remember { mutableStateOf(emptyList<String>()) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var errorIndex by remember { mutableIntStateOf(-1) }
     val isCorrect = currentSequence == targetSequence
+
+    LaunchedEffect(errorMessage) {
+        if (errorMessage != null) {
+            kotlinx.coroutines.delay(2000)
+            errorMessage = null
+            errorIndex = -1
+            currentSequence = emptyList()
+        }
+    }
 
     Text(
         text = "Understanding C D E F G A B",
@@ -215,20 +228,33 @@ private fun Lesson2Content(onComplete: () -> Unit, playNote: (String) -> Unit) {
     ) {
         targetSequence.forEachIndexed { index, note ->
             val isFilled = index < currentSequence.size
+            val isError = index == errorIndex
             Box(
                 modifier = Modifier
                     .padding(4.dp)
                     .size(32.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(if (isFilled) PrimaryAccent else CardSurface)
-                    .border(1.dp, PrimaryAccent.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
+                    .background(if (isError) Color.Red.copy(alpha = 0.5f) else if (isFilled) PrimaryAccent else CardSurface)
+                    .border(1.dp, if (isError) Color.Red else PrimaryAccent.copy(alpha = 0.3f), RoundedCornerShape(4.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (isFilled) {
                     Text(note, fontSize = 12.sp, color = PrimaryBackground, fontWeight = FontWeight.Bold)
+                } else if (isError) {
+                    Text(targetSequence[index], fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
+    }
+
+    if (errorMessage != null) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = errorMessage!!,
+            color = Color.Red,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
     }
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -241,12 +267,13 @@ private fun Lesson2Content(onComplete: () -> Unit, playNote: (String) -> Unit) {
         listOf("A", "B", "C", "D", "E", "F", "G").forEach { note ->
             Button(
                 onClick = {
-                    if (currentSequence.size < targetSequence.size) {
+                    if (currentSequence.size < targetSequence.size && errorMessage == null) {
                         if (note == targetSequence[currentSequence.size]) {
                             currentSequence = currentSequence + note
                             playNote(note)
                         } else {
-                            currentSequence = emptyList() // Reset on wrong note
+                            errorIndex = currentSequence.size
+                            errorMessage = "Not quite right. Try arranging the notes again."
                         }
                     }
                 },
@@ -277,6 +304,10 @@ private fun Lesson2Content(onComplete: () -> Unit, playNote: (String) -> Unit) {
 private fun Lesson3Content(onComplete: () -> Unit, playNote: (Note, Int) -> Unit) {
     var whiteTapped by remember { mutableStateOf(false) }
     var blackTapped by remember { mutableStateOf(false) }
+    
+    // Tracking current key interactions for visual feedback
+    var lastWhiteTappedIndex by remember { mutableIntStateOf(-1) }
+    var lastBlackTappedIndex by remember { mutableIntStateOf(-1) }
 
     Text(
         text = "White Keys and Black Keys",
@@ -312,9 +343,11 @@ private fun Lesson3Content(onComplete: () -> Unit, playNote: (Note, Int) -> Unit
                         .fillMaxHeight()
                         .padding(2.dp)
                         .clip(RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
-                        .background(if (whiteTapped && i == 0) PrimaryAccent else Color.White)
+                        .background(if (lastWhiteTappedIndex == i) PrimaryAccent else Color.White)
                         .clickable { 
-                            if (i == 0) whiteTapped = true
+                            whiteTapped = true
+                            lastWhiteTappedIndex = i
+                            lastBlackTappedIndex = -1
                             playNote(note, 4)
                         }
                 )
@@ -331,9 +364,11 @@ private fun Lesson3Content(onComplete: () -> Unit, playNote: (Note, Int) -> Unit
                             .weight(1f)
                             .fillMaxHeight(0.6f)
                             .clip(RoundedCornerShape(bottomStart = 2.dp, bottomEnd = 2.dp))
-                            .background(if (blackTapped && i == 0) PrimaryAccent else Color.Black)
+                            .background(if (lastBlackTappedIndex == i) PrimaryAccent else Color.Black)
                             .clickable { 
-                                if (i == 0) blackTapped = true
+                                blackTapped = true
+                                lastBlackTappedIndex = i
+                                lastWhiteTappedIndex = -1
                                 playNote(note, 4)
                             }
                     )
@@ -346,8 +381,16 @@ private fun Lesson3Content(onComplete: () -> Unit, playNote: (Note, Int) -> Unit
     }
 
     Spacer(modifier = Modifier.height(24.dp))
+    
+    val helperText = when {
+        whiteTapped && blackTapped -> "Great! Task complete."
+        whiteTapped -> "Great! Now tap a black key."
+        blackTapped -> "Great! Now tap a white key."
+        else -> "Task: Tap a white key and a black key above."
+    }
+    
     Text(
-        text = "Task: Tap a white key and a black key above.",
+        text = helperText,
         style = MaterialTheme.typography.bodyMedium,
         color = if (whiteTapped && blackTapped) SuccessAccent else PrimaryAccent
     )
@@ -366,7 +409,25 @@ private fun Lesson3Content(onComplete: () -> Unit, playNote: (Note, Int) -> Unit
 }
 
 @Composable
-private fun Lesson4Content(onComplete: () -> Unit, playDemo: () -> Unit) {
+private fun Lesson4Content(onComplete: () -> Unit, playDemo: (List<Note>) -> Unit) {
+    val scales = remember {
+        listOf(
+            "C" to listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B, Note.C),
+            "C#" to listOf(Note.C_SHARP, Note.D_SHARP, Note.F, Note.F_SHARP, Note.G_SHARP, Note.A_SHARP, Note.C, Note.C_SHARP),
+            "D" to listOf(Note.D, Note.E, Note.F_SHARP, Note.G, Note.A, Note.B, Note.C_SHARP, Note.D),
+            "D#" to listOf(Note.D_SHARP, Note.F, Note.G, Note.G_SHARP, Note.A_SHARP, Note.C, Note.D, Note.D_SHARP),
+            "E" to listOf(Note.E, Note.F_SHARP, Note.G_SHARP, Note.A, Note.B, Note.C_SHARP, Note.D_SHARP, Note.E),
+            "F" to listOf(Note.F, Note.G, Note.A, Note.A_SHARP, Note.C, Note.D, Note.E, Note.F),
+            "F#" to listOf(Note.F_SHARP, Note.G_SHARP, Note.A_SHARP, Note.B, Note.C_SHARP, Note.D_SHARP, Note.F, Note.F_SHARP),
+            "G" to listOf(Note.G, Note.A, Note.B, Note.C, Note.D, Note.E, Note.F_SHARP, Note.G),
+            "G#" to listOf(Note.G_SHARP, Note.A_SHARP, Note.C, Note.C_SHARP, Note.D_SHARP, Note.F, Note.G, Note.G_SHARP),
+            "A" to listOf(Note.A, Note.B, Note.C_SHARP, Note.D, Note.E, Note.F_SHARP, Note.G_SHARP, Note.A),
+            "A#" to listOf(Note.A_SHARP, Note.C, Note.D, Note.D_SHARP, Note.F, Note.G, Note.A, Note.A_SHARP),
+            "B" to listOf(Note.B, Note.C_SHARP, Note.D_SHARP, Note.E, Note.F_SHARP, Note.G_SHARP, Note.A_SHARP, Note.B)
+        )
+    }
+
+    val pagerState = rememberPagerState(pageCount = { scales.size })
     var demoPlayed by remember { mutableStateOf(false) }
 
     Text(
@@ -383,34 +444,77 @@ private fun Lesson4Content(onComplete: () -> Unit, playDemo: () -> Unit) {
         color = TextSecondary,
         textAlign = TextAlign.Center
     )
-    Spacer(modifier = Modifier.height(32.dp))
+    Spacer(modifier = Modifier.height(24.dp))
+    
+    Text(
+        text = "Explore all 12 major scales",
+        style = MaterialTheme.typography.labelMedium,
+        color = PrimaryAccent
+    )
+    Spacer(modifier = Modifier.height(16.dp))
 
-    Card(
+    HorizontalPager(
+        state = pagerState,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardSurface),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("C Major Scale", style = MaterialTheme.typography.titleLarge, color = PrimaryAccent)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("C - D - E - F - G - A - B - C", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = { 
-                    demoPlayed = true
-                    playDemo()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent.copy(alpha = 0.2f)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent)
+        contentPadding = PaddingValues(horizontal = 32.dp),
+        pageSpacing = 16.dp
+    ) { page ->
+        val (name, notes) = scales[page]
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = CardSurface),
+            shape = RoundedCornerShape(16.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (pagerState.currentPage == page) PrimaryAccent else Color.Transparent)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = PrimaryAccent)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Listen to Demo", color = PrimaryAccent)
+                Text("$name Major Scale", style = MaterialTheme.typography.titleLarge, color = PrimaryAccent)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    notes.joinToString(" - ") { it.displayName },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { 
+                        demoPlayed = true
+                        playDemo(notes)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent.copy(alpha = 0.2f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = PrimaryAccent)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Listen Demo", color = PrimaryAccent)
+                }
             }
         }
     }
+    
+    Spacer(modifier = Modifier.height(16.dp))
+    
+    // Page indicator
+    Row(
+        Modifier.height(8.dp).fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        repeat(scales.size) { iteration ->
+            val color = if (pagerState.currentPage == iteration) PrimaryAccent else CardSurface
+            Box(
+                modifier = Modifier
+                    .padding(2.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(color)
+                    .size(8.dp)
+            )
+        }
+    }
 
-    Spacer(modifier = Modifier.height(48.dp))
+    Spacer(modifier = Modifier.height(40.dp))
 
     Button(
         onClick = onComplete,

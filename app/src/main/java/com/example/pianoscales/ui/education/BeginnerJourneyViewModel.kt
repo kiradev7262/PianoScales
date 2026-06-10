@@ -47,9 +47,8 @@ class BeginnerJourneyViewModel @Inject constructor(
         notePlayer.playNote(note, octave)
     }
 
-    fun playScaleDemo() {
+    fun playScaleDemo(notes: List<Note>) {
         viewModelScope.launch {
-            val notes = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B, Note.C)
             notePlayer.playSequence(notes)
         }
     }

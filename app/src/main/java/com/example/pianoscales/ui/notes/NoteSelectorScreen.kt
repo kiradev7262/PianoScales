@@ -138,11 +138,15 @@ fun NoteSelectorScreen(
                 DashboardHeader()
             }
 
-            // Beginner Onboarding Card
+            // Beginner Journey Banner/Card
             item(span = { GridItemSpan(2) }) {
-                BeginnerOnboardingCard(
-                    onStartJourney = onStartBeginnerJourney
-                )
+                if (uiState.isBeginnerJourneyComplete) {
+                    BeginnerCompleteBanner()
+                } else {
+                    BeginnerOnboardingCard(
+                        onStartJourney = onStartBeginnerJourney
+                    )
+                }
             }
 
             // Global Progress Card
@@ -219,6 +223,57 @@ fun NoteSelectorScreen(
             item(span = { GridItemSpan(2) }) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun BeginnerCompleteBanner() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = SuccessAccent.copy(alpha = 0.15f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, SuccessAccent.copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "🎓 Beginner Journey Complete",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = SuccessAccent,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "You are ready to start learning all 12 chromatic notes. Practice each note, learn its scales, chords, arpeggios, and theory lessons.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary.copy(alpha = 0.9f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                // CTA: Continue Learning - scrolls down to roots or just reminds them
+                Text(
+                    "Continue Learning Below ↓", 
+                    style = MaterialTheme.typography.labelLarge, 
+                    color = SuccessAccent,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = SuccessAccent.copy(alpha = 0.2f),
+                modifier = Modifier.size(80.dp)
+            )
         }
     }
 }

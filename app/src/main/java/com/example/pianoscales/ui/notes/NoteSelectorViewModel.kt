@@ -2,6 +2,7 @@ package com.example.pianoscales.ui.notes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.pianoscales.domain.progress.BeginnerProgressRepository
 import com.example.pianoscales.domain.progress.GetNoteProgressUseCase
 import com.example.pianoscales.domain.progress.GetOverallProgressUseCase
 import com.example.pianoscales.domain.progress.LessonProgress
@@ -18,7 +19,8 @@ data class NoteSelectorUiState(
     val noteProgress: Map<Note, NoteProgress> = emptyMap(),
     val overallProgress: OverallProgress = OverallProgress(0, 0, 0f),
     val latestProgress: LessonProgress? = null,
-    val profileImagePath: String? = null
+    val profileImagePath: String? = null,
+    val isBeginnerJourneyComplete: Boolean = false
 )
 
 @HiltViewModel
@@ -26,6 +28,7 @@ class NoteSelectorViewModel @Inject constructor(
     private val getNoteProgressUseCase: GetNoteProgressUseCase,
     private val getOverallProgressUseCase: GetOverallProgressUseCase,
     private val progressRepository: ProgressRepository,
+    private val beginnerRepository: BeginnerProgressRepository,
     private val profileRepository: com.example.pianoscales.domain.profile.ProfileRepository
 ) : ViewModel() {
 
@@ -56,6 +59,10 @@ class NoteSelectorViewModel @Inject constructor(
                 }
             }.launchIn(viewModelScope)
         }
+
+        beginnerRepository.getCompletedLessons().onEach { completed ->
+            _uiState.update { it.copy(isBeginnerJourneyComplete = completed.size >= 5) }
+        }.launchIn(viewModelScope)
     }
 
     fun updateProfileImage(path: String) {
