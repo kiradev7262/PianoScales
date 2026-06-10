@@ -17,6 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.ui.theme.*
 
 data class BeginnerLesson(
@@ -32,15 +37,24 @@ data class BeginnerLesson(
 @Composable
 fun BeginnerJourneyScreen(
     onBack: () -> Unit,
-    onStartLesson: (Int) -> Unit
+    onStartLesson: (Int) -> Unit,
+    viewModel: BeginnerJourneyViewModel = hiltViewModel()
 ) {
-    val lessons = listOf(
-        BeginnerLesson(1, "What are musical notes?", "Learn the names of the keys on the piano.", Icons.Default.PlayArrow, isCompleted = true),
+    val uiState by viewModel.uiState.collectAsState()
+    
+    val allLessons = listOf(
+        BeginnerLesson(1, "What are musical notes?", "Learn the names of the keys on the piano.", Icons.Default.PlayArrow),
         BeginnerLesson(2, "Understanding C D E F G A B", "The foundation of Western music notation.", Icons.Default.PlayArrow),
-        BeginnerLesson(3, "White keys and black keys", "Distinguishing naturals, sharps, and flats.", Icons.Default.Lock, isLocked = true),
-        BeginnerLesson(4, "What is a scale?", "Introduction to step patterns (Whole and Half).", Icons.Default.Lock, isLocked = true),
-        BeginnerLesson(5, "Your first scale", "Playing the C Major Scale with correct fingering.", Icons.Default.Lock, isLocked = true)
+        BeginnerLesson(3, "White keys and black keys", "Distinguishing naturals, sharps, and flats.", Icons.Default.PlayArrow),
+        BeginnerLesson(4, "What is a scale?", "Introduction to step patterns (Whole and Half).", Icons.Default.PlayArrow),
+        BeginnerLesson(5, "Your first scale", "Playing the C Major Scale with correct fingering.", Icons.Default.PlayArrow)
     )
+
+    val processedLessons = allLessons.map { lesson ->
+        val isCompleted = uiState.completedLessons.contains(lesson.id)
+        val isLocked = lesson.id > 1 && !uiState.completedLessons.contains(lesson.id - 1)
+        lesson.copy(isCompleted = isCompleted, isLocked = isLocked)
+    }
 
     Scaffold(
         containerColor = PrimaryBackground,
@@ -64,16 +78,49 @@ fun BeginnerJourneyScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text(
-                    text = "Welcome to your musical path. Start from the basics and build your confidence.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Column {
+                    Text(
+                        text = "Welcome to your musical path. Start from the basics and build your confidence.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    
+                    Text(
+                        text = "${(uiState.progressPercentage * 100).toInt()}% Complete",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = PrimaryAccent
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { uiState.progressPercentage },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = PrimaryAccent,
+                        trackColor = CardSurface
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
 
-            items(lessons) { lesson ->
+            items(processedLessons) { lesson ->
                 LessonItem(lesson = lesson, onClick = { if (!lesson.isLocked) onStartLesson(lesson.id) })
+            }
+            
+            if (uiState.completedLessons.size == 5) {
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { onStartLesson(-1) }, // Signal completion screen
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SuccessAccent),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("View Journey Summary", color = PrimaryBackground, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
@@ -81,15 +128,21 @@ fun BeginnerJourneyScreen(
 
 @Composable
 private fun LessonItem(lesson: BeginnerLesson, onClick: () -> Unit) {
+    val isCurrent = !lesson.isCompleted && !lesson.isLocked
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .alpha(if (lesson.isLocked) 0.6f else 1f)
             .let { if (!lesson.isLocked) it.clickable { onClick() } else it },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (lesson.isLocked) PrimaryBackground.copy(alpha = 0.5f) else CardSurface
+            containerColor = if (isCurrent) PrimaryAccent.copy(alpha = 0.1f) else CardSurface
         ),
-        border = if (lesson.isLocked) null else androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.1f))
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isCurrent) 2.dp else 1.dp,
+            color = if (isCurrent) PrimaryAccent else PrimaryAccent.copy(alpha = 0.1f)
+        )
     ) {
         Row(
             modifier = Modifier

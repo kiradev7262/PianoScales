@@ -10,13 +10,19 @@ import androidx.navigation.navArgument
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.ui.concepts.ConceptSelectorScreen
+import com.example.pianoscales.ui.education.BeginnerCompletionScreen
 import com.example.pianoscales.ui.education.BeginnerJourneyScreen
+import com.example.pianoscales.ui.education.LessonContentScreen
 import com.example.pianoscales.ui.notes.NoteSelectorScreen
 import com.example.pianoscales.ui.practice.PracticeScreen
 
 sealed class Screen(val route: String) {
     object NoteSelector : Screen("notes_screen")
     object BeginnerJourney : Screen("beginner_journey")
+    object BeginnerLesson : Screen("beginner_lesson/{lessonId}") {
+        fun createRoute(lessonId: Int) = "beginner_lesson/$lessonId"
+    }
+    object BeginnerCompletion : Screen("beginner_completion")
     object ConceptSelector : Screen("concept_screen/{note}") {
         fun createRoute(note: Note) = "concept_screen/${note.name}"
     }
@@ -49,7 +55,33 @@ fun JourneyNavHost() {
             BeginnerJourneyScreen(
                 onBack = { navController.popBackStack() },
                 onStartLesson = { lessonId ->
-                    // Currently just a placeholder, but could navigate to specific beginner content
+                    if (lessonId == -1) {
+                        navController.navigate(Screen.BeginnerCompletion.route)
+                    } else {
+                        navController.navigate(Screen.BeginnerLesson.createRoute(lessonId))
+                    }
+                }
+            )
+        }
+        composable(
+            route = Screen.BeginnerLesson.route,
+            arguments = listOf(navArgument("lessonId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val lessonId = backStackEntry.arguments?.getInt("lessonId") ?: 1
+            LessonContentScreen(
+                lessonId = lessonId,
+                onBack = { navController.popBackStack() },
+                onLessonComplete = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Screen.BeginnerCompletion.route) {
+            BeginnerCompletionScreen(
+                onContinueToJourney = {
+                    navController.navigate(Screen.NoteSelector.route) {
+                        popUpTo(Screen.NoteSelector.route) { inclusive = true }
+                    }
                 }
             )
         }

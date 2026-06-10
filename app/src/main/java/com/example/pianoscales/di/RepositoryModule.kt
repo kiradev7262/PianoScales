@@ -23,4 +23,10 @@ abstract class RepositoryModule {
     abstract fun bindProfileRepository(
         profileRepositoryImpl: com.example.pianoscales.data.profile.ProfileRepositoryImpl
     ): com.example.pianoscales.domain.profile.ProfileRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBeginnerProgressRepository(
+        beginnerProgressRepositoryImpl: com.example.pianoscales.data.repository.BeginnerProgressRepositoryImpl
+    ): com.example.pianoscales.domain.progress.BeginnerProgressRepository
 }
