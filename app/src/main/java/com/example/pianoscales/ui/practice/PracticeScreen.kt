@@ -235,10 +235,16 @@ fun PracticeTabContent(
 
         // Auto-scroll logic
         LaunchedEffect(uiState.currentPlayingIndex, uiState.guidedPractice.currentIndex) {
-            val indexToScroll = if (uiState.guidedPractice.isRunning) {
+            val rawIndex = if (uiState.guidedPractice.isRunning) {
                 uiState.guidedPractice.currentIndex
             } else if (uiState.isPlaying) {
                 uiState.currentPlayingIndex
+            } else {
+                -1
+            }
+
+            val indexToScroll = if (rawIndex != -1) {
+                rawIndex.coerceAtMost(uiState.generatedNotes.size - 1)
             } else {
                 -1
             }
@@ -252,7 +258,7 @@ fun PracticeTabContent(
                     var lastNoteOrdinal = -1
                     var currentOctave = 4
                     for (i in 0..indexToScroll) {
-                        val note = uiState.generatedNotes[i]
+                        val note = uiState.generatedNotes.getOrNull(i) ?: break
                         if (i > 0 && note.ordinal <= lastNoteOrdinal) {
                             currentOctave++
                         }
