@@ -86,7 +86,9 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = BottomNavScreen.Journey.route,
-            modifier = Modifier.padding(if (showBottomBar) innerPadding else PaddingValues(0.dp))
+            modifier = Modifier.padding(
+                bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp
+            )
         ) {
             composable(BottomNavScreen.Journey.route) {
                 JourneyNavHost()

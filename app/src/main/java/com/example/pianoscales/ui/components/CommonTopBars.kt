@@ -76,9 +76,7 @@ fun PianoScalesHomeTopBar(
             containerColor = Color.Transparent,
             titleContentColor = TextPrimary
         ),
-        // Reduce vertical gap by using a custom inset that is slightly smaller than full status bars if needed,
-        // or just ensure we use it consistently. Standard TopAppBar has 4dp top padding usually.
-        windowInsets = WindowInsets.statusBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        windowInsets = TopAppBarDefaults.windowInsets,
         modifier = modifier
     )
 }
@@ -124,7 +122,7 @@ fun PianoScalesDetailTopBar(
             containerColor = Color.Transparent,
             titleContentColor = TextPrimary
         ),
-        windowInsets = WindowInsets.statusBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+        windowInsets = TopAppBarDefaults.windowInsets,
         modifier = modifier
     )
 }
