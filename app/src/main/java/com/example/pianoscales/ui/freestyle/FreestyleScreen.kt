@@ -20,9 +20,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.times
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.ui.components.PianoScalesHomeTopBar
 import com.example.pianoscales.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -41,9 +41,9 @@ fun FreestyleScreen(
         containerColor = PrimaryBackground,
         topBar = {
             if (!isLandscape) {
-                TopAppBar(
-                    title = { Text("Freestyle Playground", color = TextPrimary) },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
+                PianoScalesHomeTopBar(
+                    title = "Freestyle Playground",
+                    showAvatar = false
                 )
             }
         }

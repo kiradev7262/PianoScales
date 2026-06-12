@@ -34,6 +34,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.ui.components.PianoScalesDetailTopBar
 import com.example.pianoscales.ui.practice.components.*
 import com.example.pianoscales.ui.theme.*
 
@@ -89,27 +90,10 @@ fun PracticeScreen(
         containerColor = PrimaryBackground,
         topBar = {
             Column {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("${rootNote.displayName} ${conceptType.displayName}", color = TextPrimary)
-                            if (uiState.isLessonAlreadyCompleted || uiState.guidedPractice.lessonCompleted) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Completed",
-                                    tint = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
+                PianoScalesDetailTopBar(
+                    title = "${rootNote.displayName} ${conceptType.displayName}",
+                    onBack = onBack,
+                    isCompleted = uiState.isLessonAlreadyCompleted || uiState.guidedPractice.lessonCompleted
                 )
                 
                 PillTabRow(

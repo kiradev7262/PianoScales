@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -19,8 +18,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.audio_intelligence.FeatureCard
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.ui.components.PianoScalesDetailTopBar
 import com.example.pianoscales.ui.theme.CardSurface
 import com.example.pianoscales.ui.theme.PrimaryAccent
+import com.example.pianoscales.ui.theme.PrimaryBackground
 import com.example.pianoscales.ui.theme.TextPrimary
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,20 +33,13 @@ fun EarTrainingScreen(
     var currentSubFeature by remember { mutableStateOf<EarTrainingSubFeature?>(null) }
 
     Scaffold(
+        containerColor = PrimaryBackground,
         topBar = {
-            TopAppBar(
-                title = { Text(currentSubFeature?.title ?: "Ear Training") },
-                navigationIcon = {
-                    IconButton(onClick = { 
-                        if (currentSubFeature == null) onBack() else currentSubFeature = null 
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = TextPrimary
-                )
+            PianoScalesDetailTopBar(
+                title = currentSubFeature?.title ?: "Ear Training",
+                onBack = { 
+                    if (currentSubFeature == null) onBack() else currentSubFeature = null 
+                }
             )
         }
     ) { padding ->

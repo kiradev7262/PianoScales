@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.theory.ConceptCategory
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.ui.components.PianoScalesDetailTopBar
 import com.example.pianoscales.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,28 +46,9 @@ fun ConceptSelectorScreen(
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        "Lessons in ${rootNote.displayName}",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary
-                    ) 
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack, 
-                            contentDescription = "Back",
-                            tint = TextPrimary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryBackground,
-                    titleContentColor = TextPrimary,
-                    navigationIconContentColor = TextPrimary
-                )
+            PianoScalesDetailTopBar(
+                title = "Lessons in ${rootNote.displayName}",
+                onBack = onBack
             )
         }
     ) { padding ->

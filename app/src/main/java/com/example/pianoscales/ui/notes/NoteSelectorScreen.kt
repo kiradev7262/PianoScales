@@ -40,6 +40,7 @@ import com.example.pianoscales.domain.progress.OverallProgress
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.ui.components.LessonCard
+import com.example.pianoscales.ui.components.PianoScalesHomeTopBar
 import com.example.pianoscales.ui.components.SectionHeader
 import com.example.pianoscales.ui.theme.*
 import java.io.File
@@ -79,48 +80,18 @@ fun NoteSelectorScreen(
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        "PianoScales",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = TextPrimary 
-                    ) 
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        when (PackageManager.PERMISSION_GRANTED) {
-                            ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) -> {
-                                cameraLauncher.launch()
-                            }
-                            else -> {
-                                permissionLauncher.launch(android.Manifest.permission.CAMERA)
-                            }
+            PianoScalesHomeTopBar(
+                profileImagePath = uiState.profileImagePath,
+                onAvatarClick = {
+                    when (PackageManager.PERMISSION_GRANTED) {
+                        ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) -> {
+                            cameraLauncher.launch()
                         }
-                    }) {
-                        val profileImage = remember(uiState.profileImagePath) {
-                            uiState.profileImagePath?.let {
-                                BitmapFactory.decodeFile(it)?.asImageBitmap()
-                            }
-                        }
-                        if (profileImage != null) {
-                            Image(
-                                bitmap = profileImage,
-                                contentDescription = "ProfileImage",
-                                modifier = Modifier.size(24.dp).clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(Icons.Default.AccountCircle, contentDescription = "ProfileImage", tint = TextPrimary)
+                        else -> {
+                            permissionLauncher.launch(android.Manifest.permission.CAMERA)
                         }
                     }
-                },
-//                actions = {
-//                    IconButton(onClick = {}) {
-//                        Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = TextPrimary)
-//                    }
-//                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryBackground)
+                }
             )
         }
     ) { padding ->

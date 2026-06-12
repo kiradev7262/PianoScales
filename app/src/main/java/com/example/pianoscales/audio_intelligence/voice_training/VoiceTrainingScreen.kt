@@ -7,7 +7,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,8 +22,10 @@ import java.util.Locale
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.audio_intelligence.FeatureCard
 import com.example.pianoscales.theory.Note
+import com.example.pianoscales.ui.components.PianoScalesDetailTopBar
 import com.example.pianoscales.ui.theme.CardSurface
 import com.example.pianoscales.ui.theme.PrimaryAccent
+import com.example.pianoscales.ui.theme.PrimaryBackground
 import com.example.pianoscales.ui.theme.TextMuted
 import com.example.pianoscales.ui.theme.TextPrimary
 
@@ -58,20 +59,13 @@ fun VoiceTrainingScreen(
     }
 
     Scaffold(
+        containerColor = PrimaryBackground,
         topBar = {
-            TopAppBar(
-                title = { Text(currentSubFeature?.title ?: "Voice Training") },
-                navigationIcon = {
-                    IconButton(onClick = { 
-                        if (currentSubFeature == null) onBack() else currentSubFeature = null 
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = TextPrimary
-                )
+            PianoScalesDetailTopBar(
+                title = currentSubFeature?.title ?: "Voice Training",
+                onBack = { 
+                    if (currentSubFeature == null) onBack() else currentSubFeature = null 
+                }
             )
         }
     ) { padding ->

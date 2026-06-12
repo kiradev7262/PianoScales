@@ -6,34 +6,37 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.pianoscales.ui.components.PianoScalesHomeTopBar
 import com.example.pianoscales.ui.theme.CardSurface
 import com.example.pianoscales.ui.theme.PrimaryAccent
+import com.example.pianoscales.ui.theme.PrimaryBackground
 import com.example.pianoscales.ui.theme.TextMuted
-import com.example.pianoscales.ui.theme.TextPrimary
 
 @Composable
 fun AudioIntelligenceScreen(
     onNavigateToEarTraining: () -> Unit,
     onNavigateToVoiceTraining: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Audio Intelligence",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
+    Scaffold(
+        containerColor = PrimaryBackground,
+        topBar = {
+            PianoScalesHomeTopBar(
+                title = "Audio Intelligence",
+                showAvatar = false
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+        ) {
         LazyColumn(
+            modifier = Modifier.padding(top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -50,6 +53,7 @@ fun AudioIntelligenceScreen(
                     onClick = onNavigateToVoiceTraining
                 )
             }
+        }
         }
     }
 }
