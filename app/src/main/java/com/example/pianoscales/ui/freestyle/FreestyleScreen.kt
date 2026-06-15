@@ -59,6 +59,7 @@ fun FreestyleScreen(
                 // Mini header for landscape to save space
                 Row(
                     modifier = Modifier
+                        .statusBarsPadding()
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,

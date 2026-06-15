@@ -6,16 +6,16 @@ import com.example.pianoscales.audio.playback.NotePlayer
 import com.example.pianoscales.domain.progress.BeginnerProgressRepository
 import com.example.pianoscales.theory.Note
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class BeginnerJourneyUiState(
     val completedLessons: Set<Int> = emptySet(),
-    val progressPercentage: Float = 0f
+    val progressPercentage: Float = 0f,
+    val isDemoPlaying: Boolean = false,
+    val playingNotes: List<Note>? = null
 )
 
 @HiltViewModel
@@ -24,18 +24,28 @@ class BeginnerJourneyViewModel @Inject constructor(
     private val notePlayer: NotePlayer
 ) : ViewModel() {
 
-    val uiState: StateFlow<BeginnerJourneyUiState> = repository.getCompletedLessons()
-        .map { completed ->
-            BeginnerJourneyUiState(
-                completedLessons = completed,
-                progressPercentage = completed.size.toFloat() / 5f
-            )
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = BeginnerJourneyUiState()
+    private val _isDemoPlaying = MutableStateFlow(false)
+    private val _playingNotes = MutableStateFlow<List<Note>?>(null)
+
+    val uiState: StateFlow<BeginnerJourneyUiState> = combine(
+        repository.getCompletedLessons(),
+        _isDemoPlaying,
+        _playingNotes
+    ) { completed, isPlaying, notes ->
+        BeginnerJourneyUiState(
+            completedLessons = completed,
+            progressPercentage = completed.size.toFloat() / 5f,
+            isDemoPlaying = isPlaying,
+            playingNotes = notes
         )
+    }
+    .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = BeginnerJourneyUiState()
+    )
+
+    private var playbackJob: Job? = null
 
     fun completeLesson(lessonId: Int) {
         viewModelScope.launch {
@@ -48,8 +58,24 @@ class BeginnerJourneyViewModel @Inject constructor(
     }
 
     fun playScaleDemo(notes: List<Note>) {
-        viewModelScope.launch {
-            notePlayer.playSequence(notes)
+        if (_isDemoPlaying.value) return
+
+        playbackJob?.cancel()
+        playbackJob = viewModelScope.launch {
+            _isDemoPlaying.value = true
+            _playingNotes.value = notes
+            try {
+                notePlayer.playSequence(notes)
+            } finally {
+                _isDemoPlaying.value = false
+                _playingNotes.value = null
+            }
         }
+    }
+
+    fun stopDemo() {
+        playbackJob?.cancel()
+        _isDemoPlaying.value = false
+        _playingNotes.value = null
     }
 }

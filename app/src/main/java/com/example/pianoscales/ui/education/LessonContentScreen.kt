@@ -35,6 +35,14 @@ fun LessonContentScreen(
     onLessonComplete: () -> Unit,
     viewModel: BeginnerJourneyViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopDemo()
+        }
+    }
+
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {
@@ -85,6 +93,7 @@ fun LessonContentScreen(
                     playNote = { note, octave -> viewModel.playNote(note, octave) }
                 )
                 4 -> Lesson4Content(
+                    uiState = uiState,
                     onComplete = { 
                         viewModel.completeLesson(4)
                         onLessonComplete()
@@ -408,7 +417,11 @@ private fun Lesson3Content(onComplete: () -> Unit, playNote: (Note, Int) -> Unit
 }
 
 @Composable
-private fun Lesson4Content(onComplete: () -> Unit, playDemo: (List<Note>) -> Unit) {
+private fun Lesson4Content(
+    uiState: BeginnerJourneyUiState,
+    onComplete: () -> Unit,
+    playDemo: (List<Note>) -> Unit
+) {
     val majorScales = remember {
         listOf(
             "C" to listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B, Note.C),
@@ -483,6 +496,8 @@ private fun Lesson4Content(onComplete: () -> Unit, playDemo: (List<Note>) -> Uni
             name = "$name Major",
             notes = notes,
             isActive = majorPagerState.currentPage == page,
+            isDemoPlaying = uiState.isDemoPlaying,
+            isThisScalePlaying = uiState.playingNotes == notes,
             onPlay = {
                 majorDemoPlayed = true
                 playDemo(notes)
@@ -518,6 +533,8 @@ private fun Lesson4Content(onComplete: () -> Unit, playDemo: (List<Note>) -> Uni
             name = "$name Minor",
             notes = notes,
             isActive = minorPagerState.currentPage == page,
+            isDemoPlaying = uiState.isDemoPlaying,
+            isThisScalePlaying = uiState.playingNotes == notes,
             onPlay = {
                 minorDemoPlayed = true
                 playDemo(notes)
@@ -543,6 +560,8 @@ private fun ScaleCard(
     name: String,
     notes: List<Note>,
     isActive: Boolean,
+    isDemoPlaying: Boolean,
+    isThisScalePlaying: Boolean,
     onPlay: () -> Unit
 ) {
     Card(
@@ -572,13 +591,28 @@ private fun ScaleCard(
             Spacer(modifier = Modifier.height(20.dp))
             Button(
                 onClick = onPlay,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent.copy(alpha = 0.1f)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent),
+                enabled = !isDemoPlaying,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isThisScalePlaying) PrimaryAccent.copy(alpha = 0.2f) else PrimaryAccent.copy(alpha = 0.1f)
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isThisScalePlaying) PrimaryAccent else PrimaryAccent.copy(alpha = 0.5f)),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(20.dp))
+                if (isThisScalePlaying) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = PrimaryAccent
+                    )
+                } else {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(20.dp))
+                }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Listen Demo", color = PrimaryAccent, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = if (isThisScalePlaying) "Playing..." else "Listen Demo",
+                    color = PrimaryAccent,
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
     }
