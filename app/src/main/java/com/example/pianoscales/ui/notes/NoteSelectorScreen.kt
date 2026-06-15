@@ -1,7 +1,6 @@
 package com.example.pianoscales.ui.notes
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +42,7 @@ import com.example.pianoscales.ui.components.LessonCard
 import com.example.pianoscales.ui.components.PianoScalesHomeTopBar
 import com.example.pianoscales.ui.components.SectionHeader
 import com.example.pianoscales.ui.theme.*
+import com.example.pianoscales.util.rememberPermissionHandler
 import java.io.File
 import java.io.FileOutputStream
 
@@ -56,6 +56,7 @@ fun NoteSelectorScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
@@ -69,27 +70,21 @@ fun NoteSelectorScreen(
         }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            cameraLauncher.launch()
-        }
-    }
+    val requestCameraPermission = rememberPermissionHandler(
+        permission = android.Manifest.permission.CAMERA,
+        permissionName = "Camera",
+        snackbarHostState = snackbarHostState
+    )
 
     Scaffold(
         containerColor = PrimaryBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             PianoScalesHomeTopBar(
                 profileImagePath = uiState.profileImagePath,
                 onAvatarClick = {
-                    when (PackageManager.PERMISSION_GRANTED) {
-                        ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) -> {
-                            cameraLauncher.launch()
-                        }
-                        else -> {
-                            permissionLauncher.launch(android.Manifest.permission.CAMERA)
-                        }
+                    requestCameraPermission {
+                        cameraLauncher.launch()
                     }
                 }
             )

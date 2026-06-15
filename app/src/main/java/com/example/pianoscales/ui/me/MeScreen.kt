@@ -1,7 +1,6 @@
 package com.example.pianoscales.ui.me
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -39,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.ui.theme.*
+import com.example.pianoscales.util.rememberPermissionHandler
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -52,7 +52,6 @@ fun MeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     
     var showNameDialog by remember { mutableStateOf(false) }
@@ -70,36 +69,11 @@ fun MeScreen(
         }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            cameraLauncher.launch(null)
-        } else {
-            val activity = context as? android.app.Activity
-            val showRationale = activity?.let {
-                ActivityCompat.shouldShowRequestPermissionRationale(it, android.Manifest.permission.CAMERA)
-            } ?: true
-
-            scope.launch {
-                if (!showRationale) {
-                    val result = snackbarHostState.showSnackbar(
-                        message = "Camera permission has been permanently denied. Please enable it in Settings.",
-                        actionLabel = "Settings",
-                        duration = SnackbarDuration.Long
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                        }
-                        context.startActivity(intent)
-                    }
-                } else {
-                    snackbarHostState.showSnackbar("Camera permission is required to set a profile photo.")
-                }
-            }
-        }
-    }
+    val requestCameraPermission = rememberPermissionHandler(
+        permission = android.Manifest.permission.CAMERA,
+        permissionName = "Camera",
+        snackbarHostState = snackbarHostState
+    )
 
     Scaffold(
         containerColor = PrimaryBackground,
@@ -127,13 +101,8 @@ fun MeScreen(
                     displayName = uiState.displayName,
                     imagePath = uiState.profileImagePath,
                     onImageClick = {
-                        when (PackageManager.PERMISSION_GRANTED) {
-                            ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA) -> {
-                                cameraLauncher.launch(null)
-                            }
-                            else -> {
-                                permissionLauncher.launch(android.Manifest.permission.CAMERA)
-                            }
+                        requestCameraPermission {
+                            cameraLauncher.launch(null)
                         }
                     },
                     onNameClick = { 

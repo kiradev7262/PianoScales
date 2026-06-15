@@ -3,7 +3,6 @@ package com.example.pianoscales.audio_intelligence.voice_training
 import androidx.compose.foundation.layout.*
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
@@ -28,6 +27,7 @@ import com.example.pianoscales.ui.theme.PrimaryAccent
 import com.example.pianoscales.ui.theme.PrimaryBackground
 import com.example.pianoscales.ui.theme.TextMuted
 import com.example.pianoscales.ui.theme.TextPrimary
+import com.example.pianoscales.util.rememberPermissionHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +37,14 @@ fun VoiceTrainingScreen(
 ) {
     var currentSubFeature by remember { mutableStateOf<VoiceTrainingSubFeature?>(null) }
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    val requestMicPermission = rememberPermissionHandler(
+        permission = Manifest.permission.RECORD_AUDIO,
+        permissionName = "Microphone",
+        snackbarHostState = snackbarHostState
+    )
+
     var hasPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -46,20 +54,17 @@ fun VoiceTrainingScreen(
         )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasPermission = isGranted
-    }
-
     LaunchedEffect(currentSubFeature) {
         if (currentSubFeature != null && !hasPermission) {
-            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            requestMicPermission {
+                hasPermission = true
+            }
         }
     }
 
     Scaffold(
         containerColor = PrimaryBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             PianoScalesDetailTopBar(
                 title = currentSubFeature?.title ?: "Voice Training",
@@ -77,7 +82,9 @@ fun VoiceTrainingScreen(
         ) {
             if (!hasPermission && currentSubFeature != null) {
                 PermissionDeniedContent {
-                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    requestMicPermission {
+                        hasPermission = true
+                    }
                 }
             } else if (currentSubFeature == null) {
                 Text(

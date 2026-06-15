@@ -38,6 +38,7 @@ import com.example.pianoscales.ui.components.PianoScalesDetailTopBar
 import com.example.pianoscales.ui.practice.components.*
 import com.example.pianoscales.ui.practice.components.WatchTabContent
 import com.example.pianoscales.ui.theme.*
+import com.example.pianoscales.util.rememberPermissionHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,31 +50,20 @@ fun PracticeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Theory", "Learn", "Watch", "Practice")
 
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            android.util.Log.d("MIC DEBUG", "Permission Granted\nStarting Guided Session Listening Engine")
-            uiState.pendingActionAfterPermission?.invoke()
-        } else {
-            android.util.Log.d("MIC DEBUG", "Permission Denied")
-        }
-    }
+    val requestMicPermission = rememberPermissionHandler(
+        permission = Manifest.permission.RECORD_AUDIO,
+        permissionName = "Microphone",
+        snackbarHostState = snackbarHostState
+    )
 
     fun checkAndRun(entryPoint: String, action: () -> Unit) {
-        when (PackageManager.PERMISSION_GRANTED) {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) -> {
-                android.util.Log.d("MIC DEBUG", "Entry Point: $entryPoint\nPermission Status: GRANTED")
-                action()
-            }
-            else -> {
-                android.util.Log.d("MIC DEBUG", "Entry Point: $entryPoint\nPermission Status: NOT_GRANTED\nRequesting Permission...")
-                viewModel.setPendingAction(action)
-                launcher.launch(Manifest.permission.RECORD_AUDIO)
-            }
+        android.util.Log.d("MIC DEBUG", "Entry Point: $entryPoint")
+        requestMicPermission {
+            action()
         }
     }
 
@@ -89,6 +79,7 @@ fun PracticeScreen(
 
     Scaffold(
         containerColor = PrimaryBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 PianoScalesDetailTopBar(
