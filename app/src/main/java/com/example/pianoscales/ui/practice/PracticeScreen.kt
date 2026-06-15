@@ -36,6 +36,7 @@ import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.ui.components.PianoScalesDetailTopBar
 import com.example.pianoscales.ui.practice.components.*
+import com.example.pianoscales.ui.practice.components.WatchTabContent
 import com.example.pianoscales.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +50,7 @@ fun PracticeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Theory", "Learn", "Practice")
+    val tabs = listOf("Theory", "Learn", "Watch", "Practice")
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -117,7 +118,8 @@ fun PracticeScreen(
             when (selectedTab) {
                 0 -> TheoryTabContent(uiState, viewModel)
                 1 -> LearnTabContent(uiState, viewModel)
-                2 -> PracticeTabContent(uiState, viewModel) { entryPoint, action ->
+                2 -> WatchTabContent(rootNote, conceptType)
+                3 -> PracticeTabContent(uiState, viewModel) { entryPoint, action ->
                     checkAndRun(entryPoint, action)
                 }
             }
