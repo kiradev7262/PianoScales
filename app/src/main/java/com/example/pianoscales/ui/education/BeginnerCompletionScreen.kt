@@ -56,7 +56,7 @@ fun BeginnerCompletionScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "🎉 Journey Complete!",
+            text = "🎓 Beginner Journey Complete",
             style = MaterialTheme.typography.headlineLarge,
             color = TextPrimary,
             fontWeight = FontWeight.Bold,
@@ -66,7 +66,7 @@ fun BeginnerCompletionScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Congratulations! You've mastered the basics of piano notes and scales. You're now ready to start your main learning journey.",
+            text = "You've built the foundations of music learning. Explore the dashboard to continue practicing scales, theory, chords, ear training, and guided exercises.\n\nNeed a refresher? You can revisit these beginner lessons anytime.",
             style = MaterialTheme.typography.bodyLarge,
             color = TextSecondary,
             textAlign = TextAlign.Center
@@ -84,57 +84,12 @@ fun BeginnerCompletionScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 SummaryItem(Icons.Default.Check, "Musical Notes Learned")
                 Spacer(modifier = Modifier.height(12.dp))
-                SummaryItem(Icons.Default.Check, "First Scale Mastered")
+                SummaryItem(Icons.Default.Check, "Major & Minor Scales Explored")
             }
         }
 
         Spacer(modifier = Modifier.height(40.dp))
         
-        // Continue Learning Section
-        Text(
-            text = "Your Music Journey Starts Here",
-            style = MaterialTheme.typography.titleLarge,
-            color = PrimaryAccent,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "You've learned the foundations of music. Next, explore all 12 chromatic notes and discover scales, chords, arpeggios, theory, and guided practice.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Note.entries.forEach { note ->
-                Box(
-                    modifier = Modifier
-                        .padding(2.dp)
-                        .size(width = 44.dp, height = 36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CardSurface)
-                        .border(1.dp, PrimaryAccent.copy(alpha = 0.2f), RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = note.displayName,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
         Button(
             onClick = onContinueToJourney,
             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -142,7 +97,7 @@ fun BeginnerCompletionScreen(
             shape = RoundedCornerShape(12.dp)
         ) {
             Text(
-                "Start Learning Concepts",
+                "Explore Dashboard",
                 color = PrimaryBackground,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp

@@ -112,7 +112,9 @@ fun NoteSelectorScreen(
             // Beginner Journey Banner/Card
             item(span = { GridItemSpan(2) }) {
                 if (uiState.isBeginnerJourneyComplete) {
-                    BeginnerCompleteBanner()
+                    BeginnerCompleteBanner(
+                        onRelearnBasics = onStartBeginnerJourney
+                    )
                 } else {
                     BeginnerOnboardingCard(
                         onStartJourney = onStartBeginnerJourney
@@ -199,7 +201,7 @@ fun NoteSelectorScreen(
 }
 
 @Composable
-private fun BeginnerCompleteBanner() {
+private fun BeginnerCompleteBanner(onRelearnBasics: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -225,18 +227,19 @@ private fun BeginnerCompleteBanner() {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "You are ready to start learning all 12 chromatic notes. Practice each note, learn its scales, chords, arpeggios, and theory lessons.",
+                    text = "You've built the foundations of music learning. Explore the dashboard to continue practicing. Need a refresher?",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary.copy(alpha = 0.9f)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                // CTA: Continue Learning - scrolls down to roots or just reminds them
-                Text(
-                    "Continue Learning Below ↓", 
-                    style = MaterialTheme.typography.labelLarge, 
-                    color = SuccessAccent,
-                    fontWeight = FontWeight.Bold
-                )
+                Button(
+                    onClick = onRelearnBasics,
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessAccent),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Text("Relearn Basics", color = PrimaryBackground, fontWeight = FontWeight.Bold)
+                }
             }
             
             Icon(

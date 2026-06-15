@@ -43,11 +43,11 @@ fun BeginnerJourneyScreen(
     val uiState by viewModel.uiState.collectAsState()
     
     val allLessons = listOf(
-        BeginnerLesson(1, "What are musical notes?", "Learn the names of the keys on the piano.", Icons.Default.PlayArrow),
+        BeginnerLesson(1, "What Are Musical Notes?", "Learn the names of the keys on the piano.", Icons.Default.PlayArrow),
         BeginnerLesson(2, "Understanding C D E F G A B", "The foundation of Western music notation.", Icons.Default.PlayArrow),
-        BeginnerLesson(3, "White keys and black keys", "Distinguishing naturals, sharps, and flats.", Icons.Default.PlayArrow),
-        BeginnerLesson(4, "What is a scale?", "Introduction to step patterns (Whole and Half).", Icons.Default.PlayArrow),
-        BeginnerLesson(5, "Your first scale", "Playing the C Major Scale with correct fingering.", Icons.Default.PlayArrow)
+        BeginnerLesson(3, "White Keys and Black Keys", "Distinguishing naturals, sharps, and flats.", Icons.Default.PlayArrow),
+        BeginnerLesson(4, "What Is a Scale?", "Different scales create different moods and feelings.", Icons.Default.PlayArrow),
+        BeginnerLesson(5, "Your First Major Scale", "Playing the C Major Scale with correct fingering.", Icons.Default.PlayArrow)
     )
 
     val processedLessons = allLessons.map { lesson ->
