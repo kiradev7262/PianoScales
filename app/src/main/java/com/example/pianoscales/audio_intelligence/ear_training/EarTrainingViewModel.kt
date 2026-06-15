@@ -13,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class EarTrainingViewModel @Inject constructor(
-    private val soundPoolManager: SoundPoolManager
+    private val soundPoolManager: SoundPoolManager,
+    private val profileRepository: com.example.pianoscales.domain.profile.ProfileRepository
 ) : ViewModel() {
 
     private val _targetNote = MutableStateFlow<Note?>(null)
@@ -45,9 +46,8 @@ class EarTrainingViewModel @Inject constructor(
         _selectedNote.value = note
         _isCorrect.value = (note == _targetNote.value)
         
-        if (note != _targetNote.value) {
-            // Optionally play the correct note after a short delay if user was wrong?
-            // For now just show feedback
+        if (note == _targetNote.value) {
+            viewModelScope.launch { profileRepository.updateStreak() }
         }
     }
     
@@ -90,5 +90,8 @@ class EarTrainingViewModel @Inject constructor(
         }
         
         _isCorrect.value = (intervalName == correctInterval)
+        if (intervalName == correctInterval) {
+            viewModelScope.launch { profileRepository.updateStreak() }
+        }
     }
 }

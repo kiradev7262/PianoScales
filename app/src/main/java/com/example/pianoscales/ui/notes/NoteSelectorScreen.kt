@@ -106,7 +106,7 @@ fun NoteSelectorScreen(
         ) {
             // Dashboard Header
             item(span = { GridItemSpan(2) }) {
-                DashboardHeader()
+                DashboardHeader(name = uiState.displayName)
             }
 
             // Beginner Journey Banner/Card
@@ -306,7 +306,7 @@ private fun BeginnerOnboardingCard(onStartJourney: () -> Unit) {
 }
 
 @Composable
-private fun DashboardHeader() {
+private fun DashboardHeader(name: String) {
     Column(modifier = Modifier.padding(bottom = 8.dp)) {
         Text(
             text = "Learning Dashboard",
@@ -315,7 +315,7 @@ private fun DashboardHeader() {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Welcome back, Learner. Ready for your daily practice?",
+            text = "Welcome back, $name. Ready for your daily practice?",
             style = MaterialTheme.typography.bodyLarge,
             color = TextSecondary
         )

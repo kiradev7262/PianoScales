@@ -14,7 +14,8 @@ import javax.inject.Inject
 @HiltViewModel
 class VoiceTrainingViewModel @Inject constructor(
     private val pitchDetector: PitchDetector,
-    private val soundPoolManager: SoundPoolManager
+    private val soundPoolManager: SoundPoolManager,
+    private val profileRepository: com.example.pianoscales.domain.profile.ProfileRepository
 ) : ViewModel() {
 
     private val _detectedNote = MutableStateFlow<Note?>(null)
@@ -40,6 +41,9 @@ class VoiceTrainingViewModel @Inject constructor(
                 _detectedNote.value = note
                 _frequency.value = freq
                 _isStable.value = stable
+                if (stable && note != null && note == _targetNote.value) {
+                    viewModelScope.launch { profileRepository.updateStreak() }
+                }
             }
         }
     }

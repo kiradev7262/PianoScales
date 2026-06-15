@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -22,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.pianoscales.audio_intelligence.AudioIntelligenceNavHost
 import com.example.pianoscales.navigation.JourneyNavHost
 import com.example.pianoscales.ui.freestyle.FreestyleScreen
+import com.example.pianoscales.ui.me.MeNavHost
 import com.example.pianoscales.ui.theme.CardSurface
 import com.example.pianoscales.ui.theme.PrimaryAccent
 import com.example.pianoscales.ui.theme.TextMuted
@@ -31,6 +33,7 @@ sealed class BottomNavScreen(val route: String, val label: String, val icon: Ima
     object Journey : BottomNavScreen("journey_root", "Journey", Icons.Default.Home)
     object Freestyle : BottomNavScreen("freestyle_root", "Freestyle", Icons.Default.PlayArrow)
     object AudioIntelligence : BottomNavScreen("audio_intelligence_root", "Audio AI", Icons.Default.Star)
+    object Me : BottomNavScreen("me_root", "Me", Icons.Default.Person)
 }
 
 @Composable
@@ -39,7 +42,8 @@ fun MainScreen() {
     val items = listOf(
         BottomNavScreen.Journey,
         BottomNavScreen.Freestyle,
-        BottomNavScreen.AudioIntelligence
+        BottomNavScreen.AudioIntelligence,
+        BottomNavScreen.Me
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -98,6 +102,31 @@ fun MainScreen() {
             }
             composable(BottomNavScreen.AudioIntelligence.route) {
                 AudioIntelligenceNavHost()
+            }
+            composable(BottomNavScreen.Me.route) {
+                MeNavHost(
+                    onNavigateToJourney = { 
+                        navController.navigate(BottomNavScreen.Journey.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToFreestyle = {
+                        navController.navigate(BottomNavScreen.Freestyle.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToAudioAI = {
+                        navController.navigate(BottomNavScreen.AudioIntelligence.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
             }
         }
     }

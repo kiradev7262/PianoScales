@@ -21,7 +21,8 @@ data class BeginnerJourneyUiState(
 @HiltViewModel
 class BeginnerJourneyViewModel @Inject constructor(
     private val repository: BeginnerProgressRepository,
-    private val notePlayer: NotePlayer
+    private val notePlayer: NotePlayer,
+    private val profileRepository: com.example.pianoscales.domain.profile.ProfileRepository
 ) : ViewModel() {
 
     private val _isDemoPlaying = MutableStateFlow(false)
@@ -50,6 +51,7 @@ class BeginnerJourneyViewModel @Inject constructor(
     fun completeLesson(lessonId: Int) {
         viewModelScope.launch {
             repository.completeLesson(lessonId)
+            profileRepository.updateStreak()
         }
     }
 

@@ -20,6 +20,7 @@ data class NoteSelectorUiState(
     val overallProgress: OverallProgress = OverallProgress(0, 0, 0f),
     val latestProgress: LessonProgress? = null,
     val profileImagePath: String? = null,
+    val displayName: String = "Learner",
     val isBeginnerJourneyComplete: Boolean = false
 )
 
@@ -38,6 +39,10 @@ class NoteSelectorViewModel @Inject constructor(
     init {
         profileRepository.getProfileImage().onEach { path ->
             _uiState.update { it.copy(profileImagePath = path) }
+        }.launchIn(viewModelScope)
+
+        profileRepository.getDisplayName().onEach { name ->
+            _uiState.update { it.copy(displayName = name) }
         }.launchIn(viewModelScope)
 
         getOverallProgressUseCase().onEach { overall ->

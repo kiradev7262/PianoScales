@@ -52,7 +52,8 @@ data class PracticeUiState(
 class PracticeViewModel @Inject constructor(
     private val notePlayer: NotePlayer,
     private val pitchDetector: PitchDetector,
-    private val progressRepository: ProgressRepository
+    private val progressRepository: ProgressRepository,
+    private val profileRepository: com.example.pianoscales.domain.profile.ProfileRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PracticeUiState())
@@ -127,6 +128,7 @@ class PracticeViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isPlaying = true) }
+            profileRepository.updateStreak()
             notePlayer.playSequence(
                 notes = _uiState.value.generatedNotes,
                 onNoteStarted = { index, note, octave ->
@@ -348,6 +350,7 @@ class PracticeViewModel @Inject constructor(
         val wasAlreadyCompleted = _uiState.value.isLessonAlreadyCompleted
         viewModelScope.launch {
             progressRepository.saveProgress(rootNote, conceptType, true)
+            profileRepository.updateStreak()
             if (!wasAlreadyCompleted) {
                 _uiState.update { it.copy(showFirstTimeCompletion = true) }
             }
