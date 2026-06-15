@@ -36,7 +36,6 @@ fun WatchTabContent(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (videoId != null) {
             Surface(
@@ -44,7 +43,6 @@ fun WatchTabContent(
                 color = CardSurface,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(9f / 16f) // Vertical video (Shorts)
                     .padding(vertical = 16.dp)
             ) {
                 AndroidView(
