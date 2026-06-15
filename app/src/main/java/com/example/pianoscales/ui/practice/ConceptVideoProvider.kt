@@ -25,7 +25,24 @@ object ConceptVideoProvider {
             ConceptType.NATURAL_MINOR_SCALE to ConceptWatchContent(
                 videoUrl = "PLACEHOLDER_1",
                 description = "Learn the soulful C Natural Minor scale."
+            ),
+            ConceptType.MAJOR_CHORD to ConceptWatchContent(
+                videoUrl = "UEAarNTWWHI",
+                description = "\uD83C\uDFB9 Learn the C Major Chord in just 10 seconds!\n" +
+                        "\n" +
+                        "Notes:\n" +
+                        "C • E • G\n" +
+                        "\n" +
+                        "Simply play these three notes together to create one of the most important chords in piano music.\n" +
+                        "\n" +
+                        "Perfect for beginners starting their piano journey!\n" +
+                        "\n" +
+                        "Follow for daily piano lessons, chords, and scales.\n" +
+                        "\n" +
+                        "#CMajorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts\n"
             )
+
+
         ),
         Note.G to mapOf(
             ConceptType.MAJOR_SCALE to ConceptWatchContent(
