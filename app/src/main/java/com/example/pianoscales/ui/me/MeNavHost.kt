@@ -15,7 +15,6 @@ fun MeNavHost(
     NavHost(navController = navController, startDestination = "me_screen") {
         composable("me_screen") {
             MeScreen(
-                onNavigateToPrivacy = { navController.navigate("privacy_policy") },
                 onNavigateToGoal = { route ->
                     when {
                         route.startsWith("beginner_lesson/") -> onNavigateToJourney(route)

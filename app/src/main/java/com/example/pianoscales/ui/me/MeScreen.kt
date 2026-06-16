@@ -38,6 +38,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pianoscales.ui.theme.*
+import com.example.pianoscales.util.AppLinks
 import com.example.pianoscales.util.rememberPermissionHandler
 import kotlinx.coroutines.launch
 import java.io.File
@@ -47,11 +48,11 @@ import java.io.FileOutputStream
 @Composable
 fun MeScreen(
     viewModel: MeViewModel = hiltViewModel(),
-    onNavigateToPrivacy: () -> Unit,
     onNavigateToGoal: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     
     var showNameDialog by remember { mutableStateOf(false) }
@@ -140,11 +141,20 @@ fun MeScreen(
             // Section 6: Settings
             item {
                 SettingsSection(
-                    onPrivacyClick = onNavigateToPrivacy,
+                    onPrivacyClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, AppLinks.PRIVACY_POLICY_URL.toUri())
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Unable to open Privacy Policy. Please try again later.")
+                            }
+                        }
+                    },
                     onFeedbackClick = {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
                             data = "mailto:".toUri()
-                            putExtra(Intent.EXTRA_EMAIL, arrayOf("feedback@pianoscales.app"))
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf("pianoscales.dev@gmail.com"))
                             putExtra(Intent.EXTRA_SUBJECT, "PianoScales Feedback")
                         }
                         try { context.startActivity(intent) } catch (_: Exception) {}
@@ -489,7 +499,7 @@ private fun SettingsSection(onPrivacyClick: () -> Unit, onFeedbackClick: () -> U
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = ElevatedSurface)
             SettingsItem(icon = Icons.Default.Email, title = "Send Feedback", onClick = onFeedbackClick)
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = ElevatedSurface)
-            SettingsItem(icon = Icons.Default.Info, title = "Open Source Licenses", onClick = {})
+//            SettingsItem(icon = Icons.Default.Info, title = "Open Source Licenses", onClick = {})
         }
     }
 }
