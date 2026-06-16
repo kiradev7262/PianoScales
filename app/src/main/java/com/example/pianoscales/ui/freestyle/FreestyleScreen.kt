@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -88,8 +89,7 @@ fun FreestyleScreen(
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(if (isLandscape) 12.dp else 20.dp)
-                        .fillMaxHeight(),
+                        .padding(if (isLandscape) 12.dp else 20.dp),
                     verticalArrangement = if (isLandscape) Arrangement.Center else Arrangement.Top
                 ) {
                     if (!isLandscape) {
@@ -118,8 +118,8 @@ fun FreestyleScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 InfoCard(
-                    title = "Multi-Octave Range",
-                    description = "Navigate from C3 to C7. Each octave is visually distinct and fully playable."
+                    title = "Tip",
+                    description = "Rotate your device to landscape mode for a wider keyboard and the best playing experience."
                 )
             }
         }
