@@ -1,0 +1,37 @@
+[
+  {
+    "conceptId": "c_major_scale",
+    "title": "C Major Scale",
+    "description": "The C Major scale is the most fundamental scale in Western music. \nIt contains no sharps or flats, making it unique and easy to learn.\n\nNotes:\nC → D → E → F → G → A → B → C\n\nKey Characteristics:\n• All white keys\n• Clear, bright sound\n• Foundation for music theory",
+    "youtubeUrl": "https://youtube.com/shorts/AZxvfLIxF2o",
+    "available": true
+  },
+  {
+    "conceptId": "c_natural_minor_scale",
+    "title": "C Natural Minor Scale",
+    "description": "Learn the soulful C Natural Minor scale.",
+    "youtubeUrl": null,
+    "available": false
+  },
+  {
+    "conceptId": "c_major_chord",
+    "title": "C Major Chord",
+    "description": "🎹 Learn the C Major Chord in just 10 seconds!\n\nNotes:\nC • E • G\n\nSimply play these three notes together to create one of the most important chords in piano music.\n\nPerfect for beginners starting their piano journey!\n\nFollow for daily piano lessons, chords, and scales.\n\n#CMajorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://youtube.com/shorts/UEAarNTWWHI",
+    "available": true
+  },
+  {
+    "conceptId": "g_major_scale",
+    "title": "G Major Scale",
+    "description": "The G Major scale introduces your first sharp! \nIt is widely used in folk and pop music.\n\nNotes:\nG → A → B → C → D → E → F♯ → G\n\nKey Characteristics:\n• Contains one sharp: F♯\n• Warm and resonant quality",
+    "youtubeUrl": "https://youtube.com/shorts/z3WzYUH7Wg0",
+    "available": true
+  },
+  {
+    "conceptId": "d_major_scale",
+    "title": "D Major Scale",
+    "description": "The D Major scale is a favorite for string players and pianist alike.\nIt has a triumphant and majestic feel.\n\nNotes:\nD → E → F♯ → G → A → B → C♯ → D\n\nKey Characteristics:\n• Contains two sharps: F♯ and C♯\n• Brilliant and energetic tone",
+    "youtubeUrl": "https://youtube.com/shorts/7YmK3l6N9gE",
+    "available": true
+  }
+]
