@@ -7,9 +7,9 @@ import androidx.navigation.compose.rememberNavController
 
 @Composable
 fun MeNavHost(
-    onNavigateToJourney: () -> Unit,
+    onNavigateToJourney: (String?) -> Unit,
     onNavigateToFreestyle: () -> Unit,
-    onNavigateToAudioAI: () -> Unit
+    onNavigateToAudioAI: (String?) -> Unit
 ) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "me_screen") {
@@ -18,11 +18,14 @@ fun MeNavHost(
                 onNavigateToPrivacy = { navController.navigate("privacy_policy") },
                 onNavigateToGoal = { route ->
                     when {
-                        route.startsWith("lesson/") -> onNavigateToJourney() // Simplified, could deep link
-                        route.startsWith("practice/") -> onNavigateToJourney() // Simplified
+                        route.startsWith("beginner_lesson/") -> onNavigateToJourney(route)
+                        route.startsWith("practice_screen/") -> onNavigateToJourney(route)
+                        route == "beginner_journey" -> onNavigateToJourney(route)
                         route == "freestyle_root" -> onNavigateToFreestyle()
-                        route == "audio_intelligence_root" -> onNavigateToAudioAI()
-                        route == "journey_root" -> onNavigateToJourney()
+                        route == "ear_training" -> onNavigateToAudioAI(route)
+                        route == "voice_training" -> onNavigateToAudioAI(route)
+                        route == "audio_intelligence_root" -> onNavigateToAudioAI(null)
+                        route == "journey_root" -> onNavigateToJourney(null)
                         else -> {}
                     }
                 }

@@ -16,10 +16,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.pianoscales.audio_intelligence.AudioIntelligenceNavHost
 import com.example.pianoscales.navigation.JourneyNavHost
 import com.example.pianoscales.ui.freestyle.FreestyleScreen
@@ -94,22 +96,35 @@ fun MainScreen() {
                 bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp
             )
         ) {
-            composable(BottomNavScreen.Journey.route) {
-                JourneyNavHost()
+            composable(
+                route = BottomNavScreen.Journey.route + "?subRoute={subRoute}",
+                arguments = listOf(navArgument("subRoute") { nullable = true; defaultValue = null })
+            ) { backStackEntry ->
+                val subRoute = backStackEntry.arguments?.getString("subRoute")
+                JourneyNavHost(initialSubRoute = subRoute)
             }
             composable(BottomNavScreen.Freestyle.route) {
                 FreestyleScreen()
             }
-            composable(BottomNavScreen.AudioIntelligence.route) {
-                AudioIntelligenceNavHost()
+            composable(
+                route = BottomNavScreen.AudioIntelligence.route + "?subRoute={subRoute}",
+                arguments = listOf(navArgument("subRoute") { nullable = true; defaultValue = null })
+            ) { backStackEntry ->
+                val subRoute = backStackEntry.arguments?.getString("subRoute")
+                AudioIntelligenceNavHost(initialSubRoute = subRoute)
             }
             composable(BottomNavScreen.Me.route) {
                 MeNavHost(
-                    onNavigateToJourney = { 
-                        navController.navigate(BottomNavScreen.Journey.route) {
+                    onNavigateToJourney = { subRoute -> 
+                        val route = if (subRoute != null) {
+                            "${BottomNavScreen.Journey.route}?subRoute=$subRoute"
+                        } else {
+                            BottomNavScreen.Journey.route
+                        }
+                        navController.navigate(route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = (subRoute == null)
                         }
                     },
                     onNavigateToFreestyle = {
@@ -119,11 +134,16 @@ fun MainScreen() {
                             restoreState = true
                         }
                     },
-                    onNavigateToAudioAI = {
-                        navController.navigate(BottomNavScreen.AudioIntelligence.route) {
+                    onNavigateToAudioAI = { subRoute ->
+                        val route = if (subRoute != null) {
+                            "${BottomNavScreen.AudioIntelligence.route}?subRoute=$subRoute"
+                        } else {
+                            BottomNavScreen.AudioIntelligence.route
+                        }
+                        navController.navigate(route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = (subRoute == null)
                         }
                     }
                 )

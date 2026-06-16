@@ -110,13 +110,21 @@ class MeViewModel @Inject constructor(
     }
 
     private fun determineGoal(completedBeginner: Set<Int>, allProgress: List<LessonProgress>): TodayGoal {
+        if (completedBeginner.isEmpty()) {
+            return TodayGoal(
+                title = "Start Beginner Journey",
+                description = "Learn the basics of musical notes and the piano.",
+                ctaText = "Start Journey",
+                route = "beginner_journey"
+            )
+        }
         if (completedBeginner.size < 5) {
             val next = (1..5).first { it !in completedBeginner }
             return TodayGoal(
                 title = "Complete Beginner Lesson $next",
                 description = "Build your musical foundation step by step.",
                 ctaText = "Continue Beginner Journey",
-                route = "lesson/$next"
+                route = "beginner_lesson/$next"
             )
         }
 
@@ -129,7 +137,7 @@ class MeViewModel @Inject constructor(
                         title = "Learn ${note.displayName} ${concept.displayName}",
                         description = "Expand your knowledge of music theory and practice.",
                         ctaText = "Start Learning",
-                        route = "practice/${note.name}/${concept.name}"
+                        route = "practice_screen/${note.name}/${concept.name}"
                     )
                 }
             }
@@ -138,9 +146,9 @@ class MeViewModel @Inject constructor(
         // All completed - rotate goals
         val goals = listOf(
             TodayGoal("Practice a Scale", "Spend 5 minutes practicing a scale of your choice.", "Go to Freestyle", "freestyle_root"),
-            TodayGoal("Ear Training", "Sharpen your ears with a quick training session.", "Train Now", "audio_intelligence_root"),
-            TodayGoal("Voice Training", "Improve your pitch by singing along with the notes.", "Sing Now", "audio_intelligence_root"),
-            TodayGoal("Review Basics", "Revisit a beginner lesson to stay sharp.", "Relearn Basics", "journey_root")
+            TodayGoal("Ear Training", "Sharpen your ears with a quick training session.", "Train Now", "ear_training"),
+            TodayGoal("Voice Training", "Improve your pitch by singing along with the notes.", "Sing Now", "voice_training"),
+            TodayGoal("Review Basics", "Revisit a beginner lesson to stay sharp.", "Relearn Basics", "beginner_journey")
         )
         return goals[(System.currentTimeMillis() / (1000 * 60 * 60 * 24) % goals.size).toInt()]
     }

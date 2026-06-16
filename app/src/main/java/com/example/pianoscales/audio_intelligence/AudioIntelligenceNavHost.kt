@@ -1,6 +1,7 @@
 package com.example.pianoscales.audio_intelligence
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -14,8 +15,18 @@ sealed class AudioIntelligenceRoute(val route: String) {
 }
 
 @Composable
-fun AudioIntelligenceNavHost() {
+fun AudioIntelligenceNavHost(initialSubRoute: String? = null) {
     val navController = rememberNavController()
+
+    LaunchedEffect(initialSubRoute) {
+        if (initialSubRoute != null) {
+            navController.navigate(initialSubRoute) {
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = AudioIntelligenceRoute.Main.route

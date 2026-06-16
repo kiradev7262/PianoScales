@@ -1,6 +1,7 @@
 package com.example.pianoscales.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,8 +33,19 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun JourneyNavHost() {
+fun JourneyNavHost(initialSubRoute: String? = null) {
     val navController = rememberNavController()
+
+    LaunchedEffect(initialSubRoute) {
+        if (initialSubRoute != null) {
+            navController.navigate(initialSubRoute) {
+                // To ensure deep link doesn't result in nested stacks of same destination
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.NoteSelector.route
