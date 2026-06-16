@@ -23,7 +23,7 @@ class VideoRepositoryImpl @Inject constructor(
     private val _videoMetadata = MutableStateFlow<Map<String, VideoMetadata>>(emptyMap())
 
     companion object {
-        private const val REMOTE_JSON_URL = "https://YOUR_USERNAME.github.io/pianoscales/video_content.json"
+        private const val REMOTE_JSON_URL = "https://kiradev7262.github.io/PianoScales/video_content.json"
         private const val OFFLINE_ASSET_PATH = "video_content.json"
     }
 
