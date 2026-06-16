@@ -433,7 +433,7 @@ fun TheoryTabContent(uiState: PracticeUiState, viewModel: PracticeViewModel) {
                 ) {
                     Text(
                         step.interval, 
-                        modifier = Modifier.width(48.dp), 
+                        modifier = Modifier,
                         fontWeight = FontWeight.Bold, 
                         color = PrimaryAccent
                     )
