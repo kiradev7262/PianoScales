@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pianoscales.audio.pitch.PitchDetector
 import com.example.pianoscales.audio.playback.NotePlayer
+import com.example.pianoscales.data.models.VideoMetadata
 import com.example.pianoscales.domain.progress.ProgressRepository
+import com.example.pianoscales.domain.video.VideoRepository
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.theory.TheoryExplanation
@@ -39,6 +41,7 @@ data class PracticeUiState(
     val theoryExplanation: TheoryExplanation? = null,
     val isTheoryExpanded: Boolean = false,
     val guidedPractice: GuidedPracticeState = GuidedPracticeState(),
+    val videoMetadata: VideoMetadata? = null,
     val isLessonAlreadyCompleted: Boolean = false,
     val showFirstTimeCompletion: Boolean = false,
     val pendingActionAfterPermission: (() -> Unit)? = null
@@ -53,6 +56,7 @@ class PracticeViewModel @Inject constructor(
     private val notePlayer: NotePlayer,
     private val pitchDetector: PitchDetector,
     private val progressRepository: ProgressRepository,
+    private val videoRepository: VideoRepository,
     private val profileRepository: com.example.pianoscales.domain.profile.ProfileRepository
 ) : ViewModel() {
 
@@ -83,6 +87,18 @@ class PracticeViewModel @Inject constructor(
             )
         }
         
+        // Load video metadata
+        val conceptId = "${rootNote.name.lowercase()}_${conceptType.name.lowercase()}"
+        viewModelScope.launch {
+            videoRepository.getVideoMetadata(conceptId).collect { metadata ->
+                _uiState.update { it.copy(videoMetadata = metadata) }
+            }
+        }
+
+        viewModelScope.launch {
+            videoRepository.refreshMetadata()
+        }
+
         // Load completion status
         viewModelScope.launch {
             progressRepository.getAllProgress().collect { allProgress ->

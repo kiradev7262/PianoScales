@@ -109,7 +109,7 @@ fun PracticeScreen(
             when (selectedTab) {
                 0 -> TheoryTabContent(uiState, viewModel)
                 1 -> LearnTabContent(uiState, viewModel)
-                2 -> WatchTabContent(rootNote, conceptType)
+                2 -> WatchTabContent(rootNote, conceptType, uiState.videoMetadata)
                 3 -> PracticeTabContent(uiState, viewModel) { entryPoint, action ->
                     checkAndRun(entryPoint, action)
                 }
