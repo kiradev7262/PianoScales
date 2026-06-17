@@ -159,8 +159,15 @@ fun MeScreen(
             }
             
             item {
+                val packageInfo = remember {
+                    try {
+                        context.packageManager.getPackageInfo(context.packageName, 0)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
                 Text(
-                    text = "Version 1.0.0",
+                    text = "Version ${packageInfo?.versionName ?: "1.0.0"} (${packageInfo?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) } ?: 1})",
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.labelSmall,
