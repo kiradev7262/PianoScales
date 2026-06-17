@@ -9,9 +9,9 @@
   {
     "conceptId": "c_natural_minor_scale",
     "title": "C Natural Minor Scale",
-    "description": "Learn the soulful C Natural Minor scale.",
-    "youtubeUrl": null,
-    "available": false
+    "description": "The C Natural Minor scale introduces a more emotional and expressive sound compared to its major counterpart.\n\nNotes:\nC → D → E♭ → F → G → A♭ → B♭ → C\n\nKey Characteristics:\n• Uses three flats: E♭, A♭, and B♭\n• Darker and more introspective mood\n• Widely used in expressive and cinematic music",
+    "youtubeUrl": "https://www.youtube.com/shorts/BaG1r8rIpYg",
+    "available": true
   },
   {
     "conceptId": "c_major_chord",
@@ -32,6 +32,20 @@
     "title": "D Major Scale",
     "description": "The D Major scale is a favorite for string players and pianist alike.\nIt has a triumphant and majestic feel.\n\nNotes:\nD → E → F♯ → G → A → B → C♯ → D\n\nKey Characteristics:\n• Contains two sharps: F♯ and C♯\n• Brilliant and energetic tone",
     "youtubeUrl": "https://youtube.com/shorts/7YmK3l6N9gE",
+    "available": true
+  },
+  {
+    "conceptId": "a_natural_minor_scale",
+    "title": "A Natural Minor Scale",
+    "description": "The A Natural Minor scale is the relative minor of C Major and is often the first minor scale beginners learn.\n\nNotes:\nA → B → C → D → E → F → G → A\n\nKey Characteristics:\n• No sharps or flats\n• Melancholic and expressive sound\n• Commonly used in classical, pop, and cinematic music",
+    "youtubeUrl": "https://youtube.com/shorts/LnIvpWWa8Ts",
+    "available": true
+  },
+  {
+    "conceptId": "a_minor_chord",
+    "title": "A Minor Chord",
+    "description": "🎹 Learn the A Minor Chord in just 10 seconds!\n\nNotes:\nA • C • E\n\nPlay these three notes together to create one of the most expressive chords in music.\n\nPerfect for beginners learning their first minor chord.\n\nFollow for daily piano lessons, chords, and scales.\n\n#AMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://youtube.com/shorts/_LM5nw3wiAs",
     "available": true
   }
 ]
