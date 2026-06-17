@@ -35,10 +35,24 @@
     "available": true
   },
   {
+    "conceptId": "f_major_scale",
+    "title": "F Major Scale",
+    "description": "The F Major scale introduces your first flat and has a warm, lyrical character.\nIt is commonly used in classical and devotional music.\n\nNotes:\nF → G → A → B♭ → C → D → E → F\n\nKey Characteristics:\n• Contains one flat: B♭\n• Warm and gentle sound\n• Popular in expressive melodies",
+    "youtubeUrl": "https://youtube.com/shorts/fdeLP_zKWk0",
+    "available": true
+  },
+  {
     "conceptId": "a_natural_minor_scale",
     "title": "A Natural Minor Scale",
     "description": "The A Natural Minor scale is the relative minor of C Major and is often the first minor scale beginners learn.\n\nNotes:\nA → B → C → D → E → F → G → A\n\nKey Characteristics:\n• No sharps or flats\n• Melancholic and expressive sound\n• Commonly used in classical, pop, and cinematic music",
     "youtubeUrl": "https://youtube.com/shorts/LnIvpWWa8Ts",
+    "available": true
+  },
+  {
+    "conceptId": "d_natural_minor_scale",
+    "title": "D Natural Minor Scale",
+    "description": "The D Natural Minor scale carries a dramatic and emotional quality, making it a favorite in classical music.\n\nNotes:\nD → E → F → G → A → B♭ → C → D\n\nKey Characteristics:\n• Contains one flat: B♭\n• Dark and expressive mood\n• Frequently used in classical and cinematic compositions",
+    "youtubeUrl": "https://youtube.com/shorts/ONouR6atbjo",
     "available": true
   },
   {
