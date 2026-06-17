@@ -1,19 +1,29 @@
 package com.example.pianoscales.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.pianoscales.theory.ConceptType
 import com.example.pianoscales.theory.Note
 import com.example.pianoscales.ui.concepts.ConceptSelectorScreen
+import com.example.pianoscales.ui.education.BeginnerCompletionScreen
+import com.example.pianoscales.ui.education.BeginnerJourneyScreen
+import com.example.pianoscales.ui.education.LessonContentScreen
 import com.example.pianoscales.ui.notes.NoteSelectorScreen
 import com.example.pianoscales.ui.practice.PracticeScreen
 
 sealed class Screen(val route: String) {
     object NoteSelector : Screen("notes_screen")
+    object BeginnerJourney : Screen("beginner_journey")
+    object BeginnerLesson : Screen("beginner_lesson/{lessonId}") {
+        fun createRoute(lessonId: Int) = "beginner_lesson/$lessonId"
+    }
+    object BeginnerCompletion : Screen("beginner_completion")
     object ConceptSelector : Screen("concept_screen/{note}") {
         fun createRoute(note: Note) = "concept_screen/${note.name}"
     }
@@ -23,15 +33,69 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun JourneyNavHost(initialSubRoute: String? = null) {
+    val navController = rememberNavController()
+
+    LaunchedEffect(initialSubRoute) {
+        if (initialSubRoute != null) {
+            navController.navigate(initialSubRoute) {
+                // To ensure deep link doesn't result in nested stacks of same destination
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.NoteSelector.route
     ) {
         composable(Screen.NoteSelector.route) {
-            NoteSelectorScreen { note ->
-            navController.navigate(Screen.ConceptSelector.createRoute(note))
+            NoteSelectorScreen(
+                onNoteSelected = { note ->
+                    navController.navigate(Screen.ConceptSelector.createRoute(note))
+                },
+                onContinueLesson = { note, concept ->
+                    navController.navigate(Screen.Practice.createRoute(note, concept))
+                },
+                onStartBeginnerJourney = {
+                    navController.navigate(Screen.BeginnerJourney.route)
+                }
+            )
         }
+        composable(Screen.BeginnerJourney.route) {
+            BeginnerJourneyScreen(
+                onBack = { navController.popBackStack() },
+                onStartLesson = { lessonId ->
+                    if (lessonId == -1) {
+                        navController.navigate(Screen.BeginnerCompletion.route)
+                    } else {
+                        navController.navigate(Screen.BeginnerLesson.createRoute(lessonId))
+                    }
+                }
+            )
+        }
+        composable(
+            route = Screen.BeginnerLesson.route,
+            arguments = listOf(navArgument("lessonId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val lessonId = backStackEntry.arguments?.getInt("lessonId") ?: 1
+            LessonContentScreen(
+                lessonId = lessonId,
+                onBack = { navController.popBackStack() },
+                onLessonComplete = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Screen.BeginnerCompletion.route) {
+            BeginnerCompletionScreen(
+                onContinueToJourney = {
+                    navController.navigate(Screen.NoteSelector.route) {
+                        popUpTo(Screen.NoteSelector.route) { inclusive = true }
+                    }
+                }
+            )
         }
         composable(
             route = Screen.ConceptSelector.route,
