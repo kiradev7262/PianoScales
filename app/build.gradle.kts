@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.pianoscales"
+    namespace = "com.pianoscales.learnmusic"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.pianoscales"
+        applicationId = "com.pianoscales.learnmusic"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

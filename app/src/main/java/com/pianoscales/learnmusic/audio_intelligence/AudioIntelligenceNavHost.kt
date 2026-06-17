@@ -1,0 +1,51 @@
+package com.pianoscales.learnmusic.audio_intelligence
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.pianoscales.learnmusic.audio_intelligence.ear_training.EarTrainingScreen
+import com.pianoscales.learnmusic.audio_intelligence.voice_training.VoiceTrainingScreen
+
+sealed class AudioIntelligenceRoute(val route: String) {
+    object Main : AudioIntelligenceRoute("ai_main")
+    object EarTraining : AudioIntelligenceRoute("ear_training")
+    object VoiceTraining : AudioIntelligenceRoute("voice_training")
+}
+
+@Composable
+fun AudioIntelligenceNavHost(initialSubRoute: String? = null) {
+    val navController = rememberNavController()
+
+    LaunchedEffect(initialSubRoute) {
+        if (initialSubRoute != null) {
+            navController.navigate(initialSubRoute) {
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
+
+    NavHost(
+        navController = navController,
+        startDestination = AudioIntelligenceRoute.Main.route
+    ) {
+        composable(AudioIntelligenceRoute.Main.route) {
+            AudioIntelligenceScreen(
+                onNavigateToEarTraining = {
+                    navController.navigate(AudioIntelligenceRoute.EarTraining.route)
+                },
+                onNavigateToVoiceTraining = {
+                    navController.navigate(AudioIntelligenceRoute.VoiceTraining.route)
+                }
+            )
+        }
+        composable(AudioIntelligenceRoute.EarTraining.route) {
+            EarTrainingScreen(onBack = { navController.popBackStack() })
+        }
+        composable(AudioIntelligenceRoute.VoiceTraining.route) {
+            VoiceTrainingScreen(onBack = { navController.popBackStack() })
+        }
+    }
+}
