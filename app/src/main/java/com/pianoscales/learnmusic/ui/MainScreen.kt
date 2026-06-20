@@ -34,7 +34,7 @@ sealed class BottomNavScreen(val route: String, val label: String, val icon: Ima
     object Journey : BottomNavScreen("journey_root", "Journey", Icons.Default.Home)
     object Freestyle : BottomNavScreen("freestyle_root", "Freestyle", Icons.Default.PlayArrow)
     object AudioIntelligence : BottomNavScreen("audio_intelligence_root", "Audio AI", Icons.Default.Star)
-    object SongsPack : BottomNavScreen("songs_pack_root", "Songs Pack", Icons.AutoMirrored.Filled.List)
+    object SongsPack : BottomNavScreen("songs_pack_root", "Songs", Icons.AutoMirrored.Filled.List)
     object Me : BottomNavScreen("me_root", "Me", Icons.Default.Person)
 }
 

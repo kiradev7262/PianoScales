@@ -1,5 +1,6 @@
 package com.pianoscales.learnmusic.ui.songs
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -9,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,6 +24,8 @@ fun SongCoachScreen(
     viewModel: SongCoachViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     if (uiState.isCompleted) {
         SongCompletionDialog(
@@ -44,12 +48,12 @@ fun SongCoachScreen(
             onBack = onBack
         )
 
-        // Top Section (30% height)
+        // Top Section (20% height in landscape, 30% in portrait)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.3f)
-                .padding(16.dp),
+                .weight(if (isLandscape) 0.23f else 0.3f)
+                .padding(if (isLandscape) 8.dp else 16.dp),
             contentAlignment = Alignment.Center
         ) {
             NoteDisplayArea(
@@ -58,18 +62,19 @@ fun SongCoachScreen(
             )
         }
 
-        // Bottom Section (70% height) - Keyboard
+        // Bottom Section (80% height in landscape, 70% in portrait) - Keyboard
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.7f)
+                .weight(if (isLandscape) 0.8f else 0.7f)
                 .background(CardSurface)
         ) {
             FreestylePiano(
                 onNoteClick = { note, octave -> 
                     viewModel.onNotePlayed(note, octave)
                 },
-                height = 300.dp // Will be constrained by weight
+                height = 300.dp, // Will be constrained by weight
+                blackKeyHeightRatio = if (isLandscape) 0.5f else 0.55f
             )
         }
     }
