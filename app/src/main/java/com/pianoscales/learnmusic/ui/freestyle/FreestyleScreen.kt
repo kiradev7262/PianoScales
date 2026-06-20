@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pianoscales.learnmusic.theory.Note
+import com.pianoscales.learnmusic.ui.components.InfoCard
 import com.pianoscales.learnmusic.ui.components.PianoScalesHomeTopBar
 import com.pianoscales.learnmusic.ui.theme.*
 import kotlinx.coroutines.delay
@@ -288,26 +289,5 @@ private fun BlackKey(
             color = if (isHighlighted) PrimaryBackground else TextMuted.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
-    }
-}
-
-@Composable
-private fun InfoCard(title: String, description: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = ElevatedSurface)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryAccent)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(text = title, style = MaterialTheme.typography.titleSmall, color = TextPrimary, fontWeight = FontWeight.Bold)
-                Text(text = description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-            }
-        }
     }
 }

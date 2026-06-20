@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,8 +18,6 @@ import com.pianoscales.learnmusic.ui.theme.*
 fun SongsPackScreen(
     onStartSong: (Song) -> Unit
 ) {
-    var showDialog by remember { mutableStateOf<Song?>(null) }
-
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {
@@ -46,39 +43,9 @@ fun SongsPackScreen(
             
             SongTile(
                 song = HappyBirthday,
-                onClick = { showDialog = HappyBirthday }
+                onClick = { onStartSong(HappyBirthday) }
             )
         }
-    }
-
-    if (showDialog != null) {
-        AlertDialog(
-            onDismissRequest = { showDialog = null },
-            title = { Text("Best Experienced in Landscape") },
-            text = { Text("For the best learning experience, rotate your phone horizontally.") },
-            confirmButton = {
-                TextButton(onClick = { 
-                    val song = showDialog!!
-                    showDialog = null
-                    onStartSong(song)
-                }) {
-                    Text("Continue Anyway", color = PrimaryAccent)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { 
-                    val song = showDialog!!
-                    showDialog = null
-                    onStartSong(song)
-                }) {
-                    Text("Rotate Device", color = PrimaryAccent)
-                }
-            },
-            containerColor = CardSurface,
-            titleContentColor = TextPrimary,
-            textContentColor = TextSecondary,
-            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = PrimaryAccent) }
-        )
     }
 }
 

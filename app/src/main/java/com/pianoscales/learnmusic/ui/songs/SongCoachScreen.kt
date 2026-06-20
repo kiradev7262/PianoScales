@@ -15,6 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pianoscales.learnmusic.ui.components.InfoCard
 import com.pianoscales.learnmusic.ui.freestyle.FreestylePiano
 import com.pianoscales.learnmusic.ui.theme.*
 
@@ -69,13 +70,23 @@ fun SongCoachScreen(
                 .weight(if (isLandscape) 0.8f else 0.7f)
                 .background(CardSurface)
         ) {
-            FreestylePiano(
-                onNoteClick = { note, octave -> 
-                    viewModel.onNotePlayed(note, octave)
-                },
-                height = 300.dp, // Will be constrained by weight
-                blackKeyHeightRatio = if (isLandscape) 0.5f else 0.55f
-            )
+            Column {
+                FreestylePiano(
+                    onNoteClick = { note, octave -> 
+                        viewModel.onNotePlayed(note, octave)
+                    },
+                    height = 300.dp, // Will be constrained by weight
+                    blackKeyHeightRatio = if (isLandscape) 0.5f else 0.55f
+                )
+                if (!isLandscape) {
+                    Box(modifier = Modifier.padding(16.dp)) {
+                        InfoCard(
+                            title = "Tip",
+                            description = "Rotate your device to landscape mode for a wider keyboard and the best playing experience."
+                        )
+                    }
+                }
+            }
         }
     }
 }
