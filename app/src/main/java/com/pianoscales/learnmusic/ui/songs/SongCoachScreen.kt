@@ -127,7 +127,7 @@ fun NoteDisplayArea(
             val isCompleted = index < activeNoteIndex
             
             NoteItem(
-                note = noteWithOctave.note.displayName,
+                note = "${noteWithOctave.note.displayName}${noteWithOctave.octave}",
                 isActive = isActive,
                 isCompleted = isCompleted
             )

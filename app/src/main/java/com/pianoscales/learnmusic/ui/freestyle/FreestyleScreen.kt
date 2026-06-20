@@ -3,9 +3,8 @@ package com.pianoscales.learnmusic.ui.freestyle
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
@@ -18,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -132,7 +132,6 @@ fun FreestylePiano(
     height: androidx.compose.ui.unit.Dp = 240.dp
 ) {
     val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
     val activeHighlights = remember { mutableStateMapOf<String, Boolean>() }
     
     val whiteKeyWidth = 60.dp
@@ -171,13 +170,12 @@ fun FreestylePiano(
                         note = note,
                         octave = octave,
                         isHighlighted = activeHighlights[keyId] == true,
-                        onClick = { 
+                        onDown = { 
                             activeHighlights[keyId] = true
-                            coroutineScope.launch {
-                                delay(200)
-                                activeHighlights[keyId] = false
-                            }
                             onNoteClick(note, octave) 
+                        },
+                        onUp = {
+                            activeHighlights[keyId] = false
                         },
                         modifier = Modifier
                             .width(whiteKeyWidth)
@@ -199,13 +197,12 @@ fun FreestylePiano(
                     note = note,
                     octave = octave,
                     isHighlighted = activeHighlights[keyId] == true,
-                    onClick = { 
+                    onDown = { 
                         activeHighlights[keyId] = true
-                        coroutineScope.launch {
-                            delay(200)
-                            activeHighlights[keyId] = false
-                        }
                         onNoteClick(note, octave)
+                    },
+                    onUp = {
+                        activeHighlights[keyId] = false
                     },
                     modifier = Modifier
                         .offset(x = overallOffset)
@@ -222,7 +219,8 @@ private fun WhiteKey(
     note: Note,
     octave: Int,
     isHighlighted: Boolean,
-    onClick: () -> Unit,
+    onDown: () -> Unit,
+    onUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -230,11 +228,18 @@ private fun WhiteKey(
             .padding(horizontal = 1.dp)
             .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
             .background(if (isHighlighted) PrimaryAccent else Color.White)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        onDown()
+                        try {
+                            awaitRelease()
+                        } finally {
+                            onUp()
+                        }
+                    }
+                )
+            }
             .border(0.5.dp, if (isHighlighted) PrimaryAccent else Color(0xFFE2E8F0), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)),
         contentAlignment = Alignment.BottomCenter
     ) {
@@ -253,18 +258,26 @@ private fun BlackKey(
     note: Note,
     octave: Int,
     isHighlighted: Boolean,
-    onClick: () -> Unit,
+    onDown: () -> Unit,
+    onUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp))
             .background(if (isHighlighted) PrimaryAccent else Color(0xFF0F172A))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        onDown()
+                        try {
+                            awaitRelease()
+                        } finally {
+                            onUp()
+                        }
+                    }
+                )
+            },
         contentAlignment = Alignment.BottomCenter
     ) {
         Text(
