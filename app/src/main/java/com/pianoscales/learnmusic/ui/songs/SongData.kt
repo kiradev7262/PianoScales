@@ -3,8 +3,11 @@ package com.pianoscales.learnmusic.ui.songs
 import com.pianoscales.learnmusic.theory.Note
 
 data class Song(
+    val songId: String,
     val title: String,
+    val description: String,
     val difficulty: String,
+    val version: Int,
     val lines: List<SongLine>
 )
 
@@ -18,8 +21,11 @@ data class NoteWithOctave(
 )
 
 val HappyBirthday = Song(
+    songId = "happy_birthday",
     title = "Happy Birthday",
+    description = "Learn Happy Birthday one note at a time.",
     difficulty = "Beginner",
+    version = 1,
     lines = listOf(
         SongLine(listOf(
             NoteWithOctave(Note.G, 4), NoteWithOctave(Note.G, 4), NoteWithOctave(Note.A, 4), 

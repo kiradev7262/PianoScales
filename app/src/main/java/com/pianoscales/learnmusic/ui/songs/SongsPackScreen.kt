@@ -10,14 +10,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.pianoscales.learnmusic.ui.components.PianoScalesHomeTopBar
 import com.pianoscales.learnmusic.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongsPackScreen(
-    onStartSong: (Song) -> Unit
+    onStartSong: (Song) -> Unit,
+    viewModel: SongsPackViewModel = hiltViewModel()
 ) {
+    val songs by viewModel.songs.collectAsState()
+
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {
@@ -41,10 +45,13 @@ fun SongsPackScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            SongTile(
-                song = HappyBirthday,
-                onClick = { onStartSong(HappyBirthday) }
-            )
+            songs.forEach { song ->
+                SongTile(
+                    song = song,
+                    onClick = { onStartSong(song) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
     }
 }

@@ -28,9 +28,11 @@ fun SongCoachScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    val song = uiState.song ?: return // Loading or not found
+
     if (uiState.isCompleted) {
         SongCompletionDialog(
-            songTitle = uiState.song.title,
+            songTitle = song.title,
             onPlayAgain = { viewModel.reset() },
             onBackToSongs = onBack
         )
@@ -43,9 +45,9 @@ fun SongCoachScreen(
     ) {
         // Header
         SongCoachHeader(
-            title = uiState.song.title,
+            title = song.title,
             currentLine = uiState.currentLineIndex + 1,
-            totalLines = uiState.song.lines.size,
+            totalLines = song.lines.size,
             onBack = onBack
         )
 
@@ -57,10 +59,12 @@ fun SongCoachScreen(
                 .padding(if (isLandscape) 8.dp else 16.dp),
             contentAlignment = Alignment.Center
         ) {
-            NoteDisplayArea(
-                line = uiState.currentLine,
-                activeNoteIndex = uiState.currentNoteIndex
-            )
+            uiState.currentLine?.let { line ->
+                NoteDisplayArea(
+                    line = line,
+                    activeNoteIndex = uiState.currentNoteIndex
+                )
+            }
         }
 
         // Bottom Section (80% height in landscape, 70% in portrait) - Keyboard
