@@ -13,5 +13,233 @@
             ["G4","G4","G5","E5","C5","B4","A4"],
             ["F5","F5","E5","C5","D5","C5"]
         ]
+    },
+    {
+        "songId": "twinkle_twinkle",
+        "title": "Twinkle Twinkle Little Star",
+        "description": "Play this timeless nursery rhyme.",
+        "difficulty": "Beginner",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["C4","C4","G4","G4","A4","A4","G4"],
+            ["F4","F4","E4","E4","D4","D4","C4"],
+            ["G4","G4","F4","F4","E4","E4","D4"],
+            ["G4","G4","F4","F4","E4","E4","D4"],
+            ["C4","C4","G4","G4","A4","A4","G4"],
+            ["F4","F4","E4","E4","D4","D4","C4"]
+        ]
+    },
+    {
+        "songId": "mary_had_a_little_lamb",
+        "title": "Mary Had a Little Lamb",
+        "description": "A classic beginner melody.",
+        "difficulty": "Beginner",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["E4","D4","C4","D4","E4","E4","E4"],
+            ["D4","D4","D4","E4","G4","G4"],
+            ["E4","D4","C4","D4","E4","E4","E4"],
+            ["E4","D4","D4","E4","D4","C4"]
+        ]
+    },
+    {
+        "songId": "ode_to_joy",
+        "title": "Ode to Joy",
+        "description": "Play Beethoven's famous melody.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["E4","E4","F4","G4","G4","F4","E4","D4"],
+            ["C4","C4","D4","E4","E4","D4","D4"],
+            ["E4","E4","F4","G4","G4","F4","E4","D4"],
+            ["C4","C4","D4","E4","D4","C4","C4"]
+        ]
+    },
+    {
+        "songId": "jingle_bells",
+        "title": "Jingle Bells",
+        "description": "A festive favorite.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["E4","E4","E4"],
+            ["E4","E4","E4"],
+            ["E4","G4","C4","D4","E4"],
+            ["F4","F4","F4","F4","F4","E4","E4"],
+            ["E4","D4","D4","E4","D4","G4"]
+        ]
+    },
+    {
+        "songId": "row_row_row",
+        "title": "Row Row Row Your Boat",
+        "description": "Learn this playful tune.",
+        "difficulty": "Beginner",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["C4","C4","C4","D4","E4"],
+            ["E4","D4","E4","F4","G4"],
+            ["C5","C5","C5","G4","G4","G4"],
+            ["E4","E4","E4","C4","C4","C4"],
+            ["G4","F4","E4","D4","C4"]
+        ]
+    },
+    {
+        "songId": "london_bridge",
+        "title": "London Bridge Is Falling Down",
+        "description": "A beloved children's song.",
+        "difficulty": "Beginner",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["G4","A4","G4","F4","E4","F4","G4"],
+            ["D4","E4","F4","E4","F4","G4"],
+            ["G4","A4","G4","F4","E4","F4","G4"],
+            ["D4","G4","E4","C4"]
+        ]
+    },
+    {
+        "songId": "fur_elise_intro",
+        "title": "Fur Elise (Intro)",
+        "description": "Play Beethoven's iconic opening.",
+        "difficulty": "Advanced",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["E5","D#5","E5","D#5","E5","B4","D5","C5"],
+            ["A4","C4","E4","A4"],
+            ["B4","E4","G#4","B4"],
+            ["C5","E4","E5"]
+        ]
+    },
+    {
+        "songId": "canon_in_d_intro",
+        "title": "Canon in D (Intro)",
+        "description": "Play the famous Canon melody.",
+        "difficulty": "Advanced",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["D4","A4","B4","F#4"],
+            ["G4","D4","G4","A4"],
+            ["B4","F#4","G4","D4"],
+            ["G4","A4","D5"]
+        ]
+    },
+    {
+        "songId": "hedwigs_theme",
+        "title": "Hedwig's Theme",
+        "description": "The magical Harry Potter melody.",
+        "difficulty": "Advanced",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["B4","E5","G5","F#5","E5","B5"],
+            ["A5","F#5","E5","G5","F#5","D#5"],
+            ["F5","B4"]
+        ]
+    },
+    {
+        "songId": "pirates_intro",
+        "title": "Pirates of the Caribbean",
+        "description": "Play the adventurous intro.",
+        "difficulty": "Advanced",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["E4","G4","A4"],
+            ["A4","B4","C5"],
+            ["C5","D5","B4"],
+            ["A4","G4","A4"]
+        ]
+    },
+    {
+        "songId": "titanic_intro",
+        "title": "My Heart Will Go On",
+        "description": "Play the Titanic opening.",
+        "difficulty": "Advanced",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["E4","F#4","G4","F#4","E4"],
+            ["D4","E4","F#4","G4"],
+            ["A4","G4","F#4","E4"],
+            ["D4","E4"]
+        ]
+    },
+    {
+        "songId": "lakdi_ki_kaathi",
+        "title": "Lakdi Ki Kaathi",
+        "description": "A nostalgic Hindi favorite.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["C4","D4","E4","C4"],
+            ["C4","D4","E4","C4"],
+            ["E4","F4","G4"],
+            ["E4","F4","G4"]
+        ]
+    },
+    {
+        "songId": "nani_teri_morni",
+        "title": "Nani Teri Morni",
+        "description": "Sing along with this classic.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["C4","C4","D4","E4"],
+            ["E4","D4","C4","D4"],
+            ["E4","F4","G4"],
+            ["G4","F4","E4","D4","C4"]
+        ]
+    },
+    {
+        "songId": "sare_jahan_se_achha",
+        "title": "Sare Jahan Se Achha",
+        "description": "A patriotic Indian melody.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["C4","D4","E4","F4"],
+            ["G4","A4","G4","F4"],
+            ["E4","D4","C4","D4"],
+            ["E4","F4","G4","C5"]
+        ]
+    },
+    {
+        "songId": "national_anthem_intro",
+        "title": "National Anthem (Intro)",
+        "description": "The opening phrase of Jana Gana Mana.",
+        "difficulty": "Advanced",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["G4","G4","A4","B4"],
+            ["C5","B4","A4","G4"],
+            ["A4","B4","C5","D5"],
+            ["C5","B4","A4","G4"]
+        ]
     }
 ]

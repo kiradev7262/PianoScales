@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,11 +60,43 @@ fun SongCoachScreen(
                 .padding(if (isLandscape) 8.dp else 16.dp),
             contentAlignment = Alignment.Center
         ) {
-            uiState.currentLine?.let { line ->
-                NoteDisplayArea(
-                    line = line,
-                    activeNoteIndex = uiState.currentNoteIndex
-                )
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    uiState.currentLine?.let { line ->
+                        NoteDisplayArea(
+                            line = line,
+                            activeNoteIndex = uiState.currentNoteIndex,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    DemoButton(
+                        isDemoPlaying = uiState.isDemoPlaying,
+                        onClick = { viewModel.toggleDemo() }
+                    )
+                }
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    uiState.currentLine?.let { line ->
+                        NoteDisplayArea(
+                            line = line,
+                            activeNoteIndex = uiState.currentNoteIndex
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    DemoButton(
+                        isDemoPlaying = uiState.isDemoPlaying,
+                        onClick = { viewModel.toggleDemo() }
+                    )
+                }
             }
         }
 
@@ -80,7 +114,7 @@ fun SongCoachScreen(
                     },
                     height = 300.dp,
                     blackKeyHeightRatio = if (isLandscape) 0.5f else 0.55f,
-                    enabled = uiState.pianoMode == PianoMode.VIRTUAL
+                    enabled = uiState.pianoMode == PianoMode.VIRTUAL && !uiState.isDemoPlaying
                 )
                 if (!isLandscape) {
                     Box(modifier = Modifier.padding(16.dp)) {
@@ -139,10 +173,11 @@ fun SongCoachHeader(
 @Composable
 fun NoteDisplayArea(
     line: SongLine,
-    activeNoteIndex: Int
+    activeNoteIndex: Int,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -188,6 +223,34 @@ fun NoteItem(
                 isCompleted -> SuccessAccent
                 else -> TextMuted
             }
+        )
+    }
+}
+
+@Composable
+fun DemoButton(
+    isDemoPlaying: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isDemoPlaying) ErrorAccent else PrimaryAccent,
+            contentColor = TextPrimary
+        ),
+        shape = MaterialTheme.shapes.medium,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = if (isDemoPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = if (isDemoPlaying) "Stop Demo" else "Listen Demo",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
         )
     }
 }

@@ -21,7 +21,8 @@ data class SongCoachUiState(
     val currentNoteIndex: Int = 0,
     val isCompleted: Boolean = false,
     val pianoMode: PianoMode = PianoMode.VIRTUAL,
-    val isListening: Boolean = false
+    val isListening: Boolean = false,
+    val isDemoPlaying: Boolean = false
 ) {
     val currentLine: SongLine? get() = song?.lines?.getOrNull(currentLineIndex)
     val currentNote: NoteWithOctave? get() = currentLine?.notes?.getOrNull(currentNoteIndex)
@@ -39,6 +40,7 @@ class SongCoachViewModel @Inject constructor(
     val uiState: StateFlow<SongCoachUiState> = _uiState.asStateFlow()
 
     private var pitchDetectionJob: Job? = null
+    private var demoJob: Job? = null
 
     init {
         val songId: String? = savedStateHandle["songId"]
@@ -66,7 +68,7 @@ class SongCoachViewModel @Inject constructor(
     }
 
     fun startListening() {
-        if (_uiState.value.isListening) return
+        if (_uiState.value.isListening || _uiState.value.isDemoPlaying) return
         
         _uiState.update { it.copy(isListening = true) }
         pitchDetectionJob?.cancel()
@@ -90,7 +92,7 @@ class SongCoachViewModel @Inject constructor(
     }
 
     fun onNotePlayed(note: Note, octave: Int) {
-        if (_uiState.value.pianoMode == PianoMode.EXTERNAL) return
+        if (_uiState.value.pianoMode == PianoMode.EXTERNAL || _uiState.value.isDemoPlaying) return
 
         soundPoolManager.playNote(note, octave)
         evaluateNote(note, octave)
@@ -98,7 +100,7 @@ class SongCoachViewModel @Inject constructor(
 
     private fun evaluateNote(note: Note, octave: Int) {
         val state = _uiState.value
-        if (state.isCompleted || state.song == null) return
+        if (state.isCompleted || state.song == null || state.isDemoPlaying) return
 
         val expected = state.currentNote ?: return
         if (note == expected.note && octave == expected.octave) {
@@ -125,7 +127,60 @@ class SongCoachViewModel @Inject constructor(
         }
     }
 
+    fun toggleDemo() {
+        if (_uiState.value.isDemoPlaying) {
+            stopDemo()
+        } else {
+            startDemo()
+        }
+    }
+
+    private fun startDemo() {
+        val song = _uiState.value.song ?: return
+        
+        demoJob?.cancel()
+        demoJob = viewModelScope.launch {
+            val wasListening = _uiState.value.isListening
+            val previousLineIndex = _uiState.value.currentLineIndex
+            val previousNoteIndex = _uiState.value.currentNoteIndex
+            val previousCompleted = _uiState.value.isCompleted
+            
+            stopListening()
+            
+            _uiState.update { it.copy(isDemoPlaying = true, currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
+            
+            try {
+                song.lines.forEachIndexed { lineIndex, line ->
+                    _uiState.update { it.copy(currentLineIndex = lineIndex, currentNoteIndex = 0) }
+                    line.notes.forEachIndexed { noteIndex, noteWithOctave ->
+                        _uiState.update { it.copy(currentNoteIndex = noteIndex) }
+                        soundPoolManager.playNote(noteWithOctave.note, noteWithOctave.octave)
+                        kotlinx.coroutines.delay(450)
+                    }
+                    kotlinx.coroutines.delay(200) // Small gap between lines
+                }
+            } finally {
+                _uiState.update { 
+                    it.copy(
+                        isDemoPlaying = false, 
+                        currentLineIndex = previousLineIndex, 
+                        currentNoteIndex = previousNoteIndex,
+                        isCompleted = previousCompleted
+                    ) 
+                }
+                if (wasListening || _uiState.value.pianoMode == PianoMode.EXTERNAL) {
+                    startListening()
+                }
+            }
+        }
+    }
+
+    private fun stopDemo() {
+        demoJob?.cancel()
+    }
+
     fun reset() {
+        if (_uiState.value.isDemoPlaying) stopDemo()
         _uiState.update { it.copy(currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
     }
 
