@@ -1,9 +1,11 @@
 package com.pianoscales.learnmusic.di
 
 import com.pianoscales.learnmusic.data.repository.ProgressRepositoryImpl
+import com.pianoscales.learnmusic.data.repository.SettingsRepositoryImpl
 import com.pianoscales.learnmusic.data.repository.SongRepositoryImpl
 import com.pianoscales.learnmusic.data.repository.VideoRepositoryImpl
 import com.pianoscales.learnmusic.domain.progress.ProgressRepository
+import com.pianoscales.learnmusic.domain.settings.SettingsRepository
 import com.pianoscales.learnmusic.domain.songs.SongRepository
 import com.pianoscales.learnmusic.domain.video.VideoRepository
 import dagger.Binds
@@ -45,4 +47,10 @@ abstract class RepositoryModule {
     abstract fun bindSongRepository(
         songRepositoryImpl: SongRepositoryImpl
     ): SongRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSettingsRepository(
+        settingsRepositoryImpl: SettingsRepositoryImpl
+    ): SettingsRepository
 }

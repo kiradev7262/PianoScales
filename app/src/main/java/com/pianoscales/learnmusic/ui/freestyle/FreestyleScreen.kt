@@ -131,7 +131,8 @@ fun FreestyleScreen(
 fun FreestylePiano(
     onNoteClick: (Note, Int) -> Unit,
     height: androidx.compose.ui.unit.Dp = 240.dp,
-    blackKeyHeightRatio: Float = 0.55f
+    blackKeyHeightRatio: Float = 0.55f,
+    enabled: Boolean = true
 ) {
     val scrollState = rememberScrollState()
     val activeHighlights = remember { mutableStateMapOf<String, Boolean>() }
@@ -173,8 +174,10 @@ fun FreestylePiano(
                         octave = octave,
                         isHighlighted = activeHighlights[keyId] == true,
                         onDown = { 
-                            activeHighlights[keyId] = true
-                            onNoteClick(note, octave) 
+                            if (enabled) {
+                                activeHighlights[keyId] = true
+                                onNoteClick(note, octave)
+                            }
                         },
                         onUp = {
                             activeHighlights[keyId] = false
@@ -185,8 +188,6 @@ fun FreestylePiano(
                     )
                 }
             }
-            // Add final C8 or just stop at C7. The request said C3-C7 inclusive.
-            // Note: If we end at B7, C7 is the last C.
         }
         
         // Black Keys
@@ -200,8 +201,10 @@ fun FreestylePiano(
                     octave = octave,
                     isHighlighted = activeHighlights[keyId] == true,
                     onDown = { 
-                        activeHighlights[keyId] = true
-                        onNoteClick(note, octave)
+                        if (enabled) {
+                            activeHighlights[keyId] = true
+                            onNoteClick(note, octave)
+                        }
                     },
                     onUp = {
                         activeHighlights[keyId] = false

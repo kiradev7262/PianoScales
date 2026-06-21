@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,7 +50,7 @@ fun SongCoachScreen(
             onBack = onBack
         )
 
-        // Top Section (20% height in landscape, 30% in portrait)
+        // Top Section
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -67,7 +66,7 @@ fun SongCoachScreen(
             }
         }
 
-        // Bottom Section (80% height in landscape, 70% in portrait) - Keyboard
+        // Bottom Section - Keyboard
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -79,14 +78,19 @@ fun SongCoachScreen(
                     onNoteClick = { note, octave -> 
                         viewModel.onNotePlayed(note, octave)
                     },
-                    height = 300.dp, // Will be constrained by weight
-                    blackKeyHeightRatio = if (isLandscape) 0.5f else 0.55f
+                    height = 300.dp,
+                    blackKeyHeightRatio = if (isLandscape) 0.5f else 0.55f,
+                    enabled = uiState.pianoMode == PianoMode.VIRTUAL
                 )
                 if (!isLandscape) {
                     Box(modifier = Modifier.padding(16.dp)) {
                         InfoCard(
-                            title = "Tip",
-                            description = "Rotate your device to landscape mode for a wider keyboard and the best playing experience."
+                            title = if (uiState.pianoMode == PianoMode.VIRTUAL) "Tip" else "External Mode Active",
+                            description = if (uiState.pianoMode == PianoMode.VIRTUAL) {
+                                "Rotate your device to landscape mode for a wider keyboard and the best playing experience."
+                            } else {
+                                "Play the notes on your real piano. Piano Scales is listening..."
+                            }
                         )
                     }
                 }

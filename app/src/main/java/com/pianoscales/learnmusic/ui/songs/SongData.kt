@@ -20,6 +20,11 @@ data class NoteWithOctave(
     val octave: Int
 )
 
+enum class PianoMode {
+    VIRTUAL,
+    EXTERNAL
+}
+
 val HappyBirthday = Song(
     songId = "happy_birthday",
     title = "Happy Birthday",

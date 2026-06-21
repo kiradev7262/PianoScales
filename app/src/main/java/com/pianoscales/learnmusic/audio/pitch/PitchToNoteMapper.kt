@@ -1,6 +1,7 @@
 package com.pianoscales.learnmusic.audio.pitch
 
 import com.pianoscales.learnmusic.theory.Note
+import com.pianoscales.learnmusic.ui.songs.NoteWithOctave
 import kotlin.math.log2
 import kotlin.math.roundToInt
 
@@ -11,16 +12,22 @@ object PitchToNoteMapper {
      * n = 12 * log2(fn / 440)
      */
     fun mapFrequencyToNote(frequency: Float): Note? {
-        if (frequency <= 0) return null
-
-        val semitonesFromA4 = 12 * log2(frequency / 440.0)
-        val roundedSemitones = semitonesFromA4.roundToInt()
-        
-        // Note.A is ordinal 9 (C=0, C#=1, D=2, D#=3, E=4, F=5, F#=6, G=7, G#=8, A=9, A#=10, B=11)
-        // We add 9 to the rounded semitones to get the absolute index relative to C
-        var noteIndex = (roundedSemitones + 9) % 12
-        if (noteIndex < 0) noteIndex += 12
-
+        val midiNote = frequencyToMidi(frequency) ?: return null
+        val noteIndex = midiNote % 12
         return Note.entries.getOrNull(noteIndex)
+    }
+
+    fun mapFrequencyToNoteWithOctave(frequency: Float): NoteWithOctave? {
+        val midiNote = frequencyToMidi(frequency) ?: return null
+        val noteIndex = midiNote % 12
+        val octave = (midiNote / 12) - 1
+        val note = Note.entries.getOrNull(noteIndex) ?: return null
+        return NoteWithOctave(note, octave)
+    }
+
+    private fun frequencyToMidi(frequency: Float): Int? {
+        if (frequency <= 0) return null
+        val semitonesFromA4 = 12 * log2(frequency / 440.0)
+        return (semitonesFromA4 + 69).roundToInt()
     }
 }
