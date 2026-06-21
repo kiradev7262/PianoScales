@@ -2,6 +2,9 @@ package com.pianoscales.learnmusic.ui.songs
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -176,12 +179,30 @@ fun NoteDisplayArea(
     activeNoteIndex: Int,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    val lazyListState = rememberLazyListState()
+
+    // Reset scroll when line changes
+    LaunchedEffect(line) {
+        lazyListState.scrollToItem(0)
+    }
+
+    // Auto-scroll to active note
+    LaunchedEffect(activeNoteIndex) {
+        if (activeNoteIndex >= 0) {
+            // Keep the active note slightly left of center (second or third visible item)
+            val targetScrollIndex = (activeNoteIndex - 1).coerceAtLeast(0)
+            lazyListState.animateScrollToItem(targetScrollIndex)
+        }
+    }
+
+    LazyRow(
+        state = lazyListState,
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        line.notes.forEachIndexed { index, noteWithOctave ->
+        itemsIndexed(line.notes) { index, noteWithOctave ->
             val isActive = index == activeNoteIndex
             val isCompleted = index < activeNoteIndex
             
@@ -190,10 +211,6 @@ fun NoteDisplayArea(
                 isActive = isActive,
                 isCompleted = isCompleted
             )
-            
-            if (index < line.notes.size - 1) {
-                Spacer(modifier = Modifier.width(16.dp))
-            }
         }
     }
 }
