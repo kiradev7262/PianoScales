@@ -63,6 +63,7 @@ class PracticeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(PracticeUiState())
     val uiState: StateFlow<PracticeUiState> = _uiState.asStateFlow()
 
+    private var listeningJob: kotlinx.coroutines.Job? = null
     private var lastVirtualKeyPressTime: Long = 0L
     private val SUPPRESSION_WINDOW_MS = 500L
 
@@ -178,6 +179,9 @@ class PracticeViewModel @Inject constructor(
     private fun startListening() {
         if (_uiState.value.isPlaying) return
         
+        // Ensure previous job is cancelled before starting a new one
+        listeningJob?.cancel()
+        
         _uiState.update { 
             it.copy(
                 isListening = true, 
@@ -187,7 +191,7 @@ class PracticeViewModel @Inject constructor(
                 inputVolume = 0f
             ) 
         }
-        viewModelScope.launch {
+        listeningJob = viewModelScope.launch {
             pitchDetector.startListening { note, frequency, volume, isStable ->
                 _uiState.update { it.copy(detectedFrequency = frequency, inputVolume = volume) }
                 if (isStable && note != null) {
@@ -363,6 +367,7 @@ class PracticeViewModel @Inject constructor(
     }
 
     private fun onLessonCompleted(rootNote: Note, conceptType: ConceptType) {
+        stopListening() // Stop microphone when lesson finishes to ensure clean state for retry
         val wasAlreadyCompleted = _uiState.value.isLessonAlreadyCompleted
         viewModelScope.launch {
             progressRepository.saveProgress(rootNote, conceptType, true)
@@ -383,6 +388,8 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun stopListening() {
+        listeningJob?.cancel()
+        listeningJob = null
         pitchDetector.stopListening()
         _uiState.update { it.copy(isListening = false) }
     }
