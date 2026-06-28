@@ -3,6 +3,7 @@ package com.pianoscales.learnmusic.ui
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -24,6 +25,7 @@ import com.pianoscales.learnmusic.audio_intelligence.AudioIntelligenceNavHost
 import com.pianoscales.learnmusic.navigation.JourneyNavHost
 import com.pianoscales.learnmusic.ui.freestyle.FreestyleScreen
 import com.pianoscales.learnmusic.ui.me.MeNavHost
+import com.pianoscales.learnmusic.ui.songs.SongsPackNavHost
 import com.pianoscales.learnmusic.ui.theme.CardSurface
 import com.pianoscales.learnmusic.ui.theme.PrimaryAccent
 import com.pianoscales.learnmusic.ui.theme.TextMuted
@@ -32,6 +34,7 @@ sealed class BottomNavScreen(val route: String, val label: String, val icon: Ima
     object Journey : BottomNavScreen("journey_root", "Journey", Icons.Default.Home)
     object Freestyle : BottomNavScreen("freestyle_root", "Freestyle", Icons.Default.PlayArrow)
     object AudioIntelligence : BottomNavScreen("audio_intelligence_root", "Audio AI", Icons.Default.Star)
+    object SongsPack : BottomNavScreen("songs_pack_root", "Songs", Icons.AutoMirrored.Filled.List)
     object Me : BottomNavScreen("me_root", "Me", Icons.Default.Person)
 }
 
@@ -42,6 +45,7 @@ fun MainScreen() {
         BottomNavScreen.Journey,
         BottomNavScreen.Freestyle,
         BottomNavScreen.AudioIntelligence,
+        BottomNavScreen.SongsPack,
         BottomNavScreen.Me
     )
 
@@ -50,7 +54,8 @@ fun MainScreen() {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isFreestyle = currentDestination?.hierarchy?.any { it.route == BottomNavScreen.Freestyle.route } == true
-    val showBottomBar = !(isLandscape && isFreestyle)
+    val isSongsPack = currentDestination?.hierarchy?.any { it.route == BottomNavScreen.SongsPack.route } == true
+    val showBottomBar = !(isLandscape && (isFreestyle || isSongsPack))
 
     Scaffold(
         bottomBar = {
@@ -103,12 +108,12 @@ fun MainScreen() {
             composable(BottomNavScreen.Freestyle.route) {
                 FreestyleScreen()
             }
-            composable(
-                route = BottomNavScreen.AudioIntelligence.route + "?subRoute={subRoute}",
-                arguments = listOf(navArgument("subRoute") { nullable = true; defaultValue = null })
-            ) { backStackEntry ->
+            composable(BottomNavScreen.AudioIntelligence.route + "?subRoute={subRoute}") { backStackEntry ->
                 val subRoute = backStackEntry.arguments?.getString("subRoute")
                 AudioIntelligenceNavHost(initialSubRoute = subRoute)
+            }
+            composable(BottomNavScreen.SongsPack.route) {
+                SongsPackNavHost()
             }
             composable(BottomNavScreen.Me.route) {
                 MeNavHost(

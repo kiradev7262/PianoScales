@@ -3,6 +3,8 @@ package com.pianoscales.learnmusic.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -10,6 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pianoscales.learnmusic.ui.theme.ElevatedSurface
+import com.pianoscales.learnmusic.ui.theme.PrimaryAccent
+import com.pianoscales.learnmusic.ui.theme.TextPrimary
+import com.pianoscales.learnmusic.ui.theme.TextSecondary
 
 @Composable
 fun SectionHeader(
@@ -131,6 +137,27 @@ fun TheoryCard(
             )
             Spacer(modifier = Modifier.height(12.dp))
             content()
+        }
+    }
+}
+
+@Composable
+fun InfoCard(title: String, description: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = ElevatedSurface)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryAccent)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(text = title, style = MaterialTheme.typography.titleSmall, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(text = description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            }
         }
     }
 }
