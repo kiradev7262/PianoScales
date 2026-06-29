@@ -131,5 +131,40 @@
     "description": "🎹 Learn the B Minor Chord in just 10 seconds!\n\nNotes:\nB • D • F♯\n\nPlay these three notes together to create a powerful and emotional chord often used in pop, rock, and cinematic music.\n\nPerfect for beginners exploring the expressive sound of minor harmony.\n\nFollow for daily piano lessons, chords, and scales.\n\n#BMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
     "youtubeUrl": "https://www.youtube.com/shorts/wtOoAwpmlI8",
     "available": true
+  },
+  {
+    "conceptId": "d_sharp_major_scale",
+    "title": "D♯ Major Scale",
+    "description": "The D♯ Major scale is a rare major scale with a brilliant and vibrant character.\n\nNotes:\nD♯ → E♯ → F𝄪 → G♯ → A♯ → B♯ → C𝄪 → D♯\n\nKey Characteristics:\n• Contains nine accidentals (theoretical key)\n• Bright and energetic sound\n• Primarily used for advanced music theory rather than practical performance",
+    "youtubeUrl": "https://www.youtube.com/shorts/aNVFKGtC4y4",
+    "available": true
+  },
+  {
+    "conceptId": "d_sharp_natural_minor_scale",
+    "title": "D♯ Natural Minor Scale",
+    "description": "The D♯ Natural Minor scale has a rich, emotional sound and is commonly represented as its enharmonic equivalent, E♭ Minor.\n\nNotes:\nD♯ → E♯ → F♯ → G♯ → A♯ → B → C♯ → D♯\n\nKey Characteristics:\n• Contains six sharps: F♯, C♯, G♯, D♯, A♯, and E♯\n• Dark and expressive character\n• Relative minor of F♯ Major",
+    "youtubeUrl": "https://www.youtube.com/shorts/GD7-sh4l0FI",
+    "available": true
+  },
+  {
+    "conceptId": "f_minor_chord",
+    "title": "F Minor Chord",
+    "description": "🎹 Learn the F Minor Chord in just 10 seconds!\n\nNotes:\nF • A♭ • C\n\nPlay these three notes together to create a warm and emotional chord often used in classical, pop, and cinematic music.\n\nPerfect for beginners exploring the beauty of minor harmony.\n\nFollow for daily piano lessons, chords, and scales.\n\n#FMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://www.youtube.com/shorts/8rru7quHWOQ",
+    "available": true
+  },
+  {
+    "conceptId": "e_minor_chord",
+    "title": "E Minor Chord",
+    "description": "🎹 Learn the E Minor Chord in just 10 seconds!\n\nNotes:\nE • G • B\n\nPlay these three notes together to create one of the most popular and expressive chords in music.\n\nPerfect for beginners learning their first minor chords.\n\nFollow for daily piano lessons, chords, and scales.\n\n#EMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://www.youtube.com/shorts/AOkG5-EPyVg",
+    "available": true
+  },
+  {
+    "conceptId": "e_major_scale",
+    "title": "E Major Scale",
+    "description": "The E Major scale has a bright, uplifting sound and is one of the most commonly used scales in piano, guitar, and contemporary music.\n\nNotes:\nE → F♯ → G♯ → A → B → C♯ → D♯ → E\n\nKey Characteristics:\n• Contains four sharps: F♯, C♯, G♯, and D♯\n• Bright and energetic character\n• Frequently used in pop, rock, and classical music",
+    "youtubeUrl": "https://www.youtube.com/shorts/n7CZo6WkxXc",
+    "available": true
   }
 ]
