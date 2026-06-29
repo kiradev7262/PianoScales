@@ -2,7 +2,7 @@
   {
     "conceptId": "c_major_scale",
     "title": "C Major Scale",
-    "description": "The C Major scale is the most fundamental scale in Western music. \nIt contains no sharps or flats, making it unique and easy to learn.\n\nNotes:\nC → D → E → F → G → A → B → C\n\nKey Characteristics:\n• All white keys\n• Clear, bright sound\n• Foundation for music theory",
+    "description": "The C Major scale is the most fundamental scale in Western music. \nIt contains no sharps or flats, making it unique and easy to learn.\n\nNotes:\nC → D → E → F → G → A → B → C\n\nKey Characteristics:\n• All white keys\n• Clear, bright sound\n• Foundation for music theory.",
     "youtubeUrl": "https://youtube.com/shorts/AZxvfLIxF2o",
     "available": true
   },
@@ -31,7 +31,14 @@
     "conceptId": "d_major_scale",
     "title": "D Major Scale",
     "description": "The D Major scale is a favorite for string players and pianist alike.\nIt has a triumphant and majestic feel.\n\nNotes:\nD → E → F♯ → G → A → B → C♯ → D\n\nKey Characteristics:\n• Contains two sharps: F♯ and C♯\n• Brilliant and energetic tone",
-    "youtubeUrl": "https://youtube.com/shorts/7YmK3l6N9gE",
+    "youtubeUrl": "https://www.youtube.com/shorts/TsOjlG39sOY",
+    "available": true
+  },
+  {
+    "conceptId": "f_major_scale",
+    "title": "F Major Scale",
+    "description": "The F Major scale introduces your first flat and has a warm, lyrical character.\nIt is commonly used in classical and devotional music.\n\nNotes:\nF → G → A → B♭ → C → D → E → F\n\nKey Characteristics:\n• Contains one flat: B♭\n• Warm and gentle sound\n• Popular in expressive melodies",
+    "youtubeUrl": "https://youtube.com/shorts/fdeLP_zKWk0",
     "available": true
   },
   {
@@ -42,10 +49,87 @@
     "available": true
   },
   {
+    "conceptId": "d_natural_minor_scale",
+    "title": "D Natural Minor Scale",
+    "description": "The D Natural Minor scale carries a dramatic and emotional quality, making it a favorite in classical music.\n\nNotes:\nD → E → F → G → A → B♭ → C → D\n\nKey Characteristics:\n• Contains one flat: B♭\n• Dark and expressive mood\n• Frequently used in classical and cinematic compositions",
+    "youtubeUrl": "https://youtube.com/shorts/ONouR6atbjo",
+    "available": true
+  },
+  {
     "conceptId": "a_minor_chord",
     "title": "A Minor Chord",
     "description": "🎹 Learn the A Minor Chord in just 10 seconds!\n\nNotes:\nA • C • E\n\nPlay these three notes together to create one of the most expressive chords in music.\n\nPerfect for beginners learning their first minor chord.\n\nFollow for daily piano lessons, chords, and scales.\n\n#AMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
     "youtubeUrl": "https://youtube.com/shorts/_LM5nw3wiAs",
+    "available": true
+  },
+  {
+    "conceptId": "a_major_chord",
+    "title": "A Major Chord",
+    "description": "🎹 Learn the A Major Chord in just 10 seconds!\n\nNotes:\nA • C♯ • E\n\nPlay these three notes together to create one of the brightest and most uplifting chords in music.\n\nPerfect for beginners expanding their chord vocabulary.\n\nFollow for daily piano lessons, chords, and scales.\n\n#AMajorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://youtube.com/shorts/1p2hXoVQlP8",
+    "available": true
+  },
+  {
+    "conceptId": "c_minor_chord",
+    "title": "C Minor Chord",
+    "description": "🎹 Learn the C Minor Chord in just 10 seconds!\n\nNotes:\nC • E♭ • G\n\nPlay these three notes together to create one of the most emotional and expressive chords in music.\n\nPerfect for beginners exploring the sound of minor harmony.\n\nFollow for daily piano lessons, chords, and scales.\n\n#CMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://youtube.com/shorts/cT6RulHXVtw",
+    "available": true
+  },
+  {
+    "conceptId": "g_minor_chord",
+    "title": "G Minor Chord",
+    "description": "🎹 Learn the G Minor Chord in just 10 seconds!\n\nNotes:\nG • B♭ • D\n\nPlay these three notes together to create a rich and emotional chord often used in classical, cinematic, and expressive music.\n\nPerfect for beginners discovering the beauty of minor harmony.\n\nFollow for daily piano lessons, chords, and scales.\n\n#GMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://youtube.com/shorts/XX6Oi7ktl7k",
+    "available": true
+  },
+  {
+    "conceptId": "b_major_scale",
+    "title": "B Major Scale",
+    "description": "The B Major scale has a bright and powerful character and is surprisingly comfortable to play on the piano.\n\nNotes:\nB → C♯ → D♯ → E → F♯ → G♯ → A♯ → B\n\nKey Characteristics:\n• Contains five sharps: F♯, C♯, G♯, D♯, and A♯\n• Brilliant and uplifting sound\n• Commonly used in expressive and virtuosic piano music",
+    "youtubeUrl": "https://www.youtube.com/shorts/s0CMFAhYjQk",
+    "available": true
+  },
+  {
+    "conceptId": "b_major_chord",
+    "title": "B Major Chord",
+    "description": "🎹 Learn the B Major Chord in just 10 seconds!\n\nNotes:\nB • D♯ • F♯\n\nPlay these three notes together to create a bright and confident chord often heard in pop, rock, and worship music.\n\nPerfect for beginners expanding their major chord knowledge.\n\nFollow for daily piano lessons, chords, and scales.\n\n#BMajorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://www.youtube.com/shorts/YHvY1zkeG9w",
+    "available": true
+  },
+  {
+    "conceptId": "c_sharp_major_scale",
+    "title": "C♯ Major Scale",
+    "description": "The C♯ Major scale is one of the most advanced major scales and produces a bright, brilliant sound.\n\nNotes:\nC♯ → D♯ → E♯ → F♯ → G♯ → A♯ → B♯ → C♯\n\nKey Characteristics:\n• Contains seven sharps: F♯, C♯, G♯, D♯, A♯, E♯, and B♯\n• Bright and powerful character\n• Excellent for understanding advanced music theory",
+    "youtubeUrl": "https://www.youtube.com/shorts/gYvVfrXoi0Y",
+    "available": true
+  },
+  {
+    "conceptId": "c_sharp_major_chord",
+    "title": "C♯ Major Chord",
+    "description": "🎹 Learn the C♯ Major Chord in just 10 seconds!\n\nNotes:\nC♯ • E♯ • G♯\n\nPlay these three notes together to create a bright and confident chord with a rich, resonant sound.\n\nPerfect for beginners expanding their major chord vocabulary.\n\nFollow for daily piano lessons, chords, and scales.\n\n#CSharpMajorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://www.youtube.com/shorts/t4tAE3eICWA",
+    "available": true
+  },
+  {
+    "conceptId": "c_sharp_natural_minor_scale",
+    "title": "C♯ Natural Minor Scale",
+    "description": "The C♯ Natural Minor scale has a deep, expressive character and is widely used in classical, rock, and modern music.\n\nNotes:\nC♯ → D♯ → E → F♯ → G♯ → A → B → C♯\n\nKey Characteristics:\n• Contains four sharps: F♯, C♯, G♯, and D♯\n• Dark and emotional sound\n• Relative minor of E Major",
+    "youtubeUrl": "https://www.youtube.com/shorts/hI6qjJIvx40",
+    "available": true
+  },
+  {
+    "conceptId": "c_sharp_minor_chord",
+    "title": "C♯ Minor Chord",
+    "description": "🎹 Learn the C♯ Minor Chord in just 10 seconds!\n\nNotes:\nC♯ • E • G♯\n\nPlay these three notes together to create a rich and emotional chord frequently used in pop, rock, and cinematic music.\n\nPerfect for beginners exploring minor harmony.\n\nFollow for daily piano lessons, chords, and scales.\n\n#CSharpMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://www.youtube.com/shorts/yTiAG6RkfXc",
+    "available": true
+  },
+  {
+    "conceptId": "b_minor_chord",
+    "title": "B Minor Chord",
+    "description": "🎹 Learn the B Minor Chord in just 10 seconds!\n\nNotes:\nB • D • F♯\n\nPlay these three notes together to create a powerful and emotional chord often used in pop, rock, and cinematic music.\n\nPerfect for beginners exploring the expressive sound of minor harmony.\n\nFollow for daily piano lessons, chords, and scales.\n\n#BMinorChord #LearnPiano #PianoChords #PianoLessons #PianoForBeginners #MusicTheory #Shorts",
+    "youtubeUrl": "https://www.youtube.com/shorts/wtOoAwpmlI8",
     "available": true
   }
 ]

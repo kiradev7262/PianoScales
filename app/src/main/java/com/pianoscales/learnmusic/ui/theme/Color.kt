@@ -12,6 +12,7 @@ val ElevatedSurface = Color(0xFF1E2D4D) // More distinct elevation
 val PrimaryAccent = Color(0xFF38BDF8)
 val SecondaryAccent = Color(0xFF818CF8)
 val SuccessAccent = Color(0xFF10B981)
+val ErrorAccent = Color(0xFFEF4444)
 
 // Text Colors
 val TextPrimary = Color(0xFFF8FAFC)
