@@ -3,9 +3,13 @@ package com.pianoscales.learnmusic.audio.pitch
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import android.util.Log
 import be.tarsos.dsp.pitch.Yin
 import com.pianoscales.learnmusic.theory.Note
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -15,6 +19,7 @@ import kotlin.math.sqrt
 class PitchDetector @Inject constructor() {
 
     companion object {
+        private const val TAG = "PitchDetector"
         private const val SAMPLE_RATE = 22050
         private const val BUFFER_SIZE = 1024
         
@@ -25,7 +30,10 @@ class PitchDetector @Inject constructor() {
         private const val NOTE_HOLD_MS = 800L // Keep note on screen after sound stops
     }
 
+    private val mutex = Mutex()
     private var audioRecord: AudioRecord? = null
+    
+    @Volatile
     private var isRunning = false
 
     // Stability filtering state
@@ -36,69 +44,96 @@ class PitchDetector @Inject constructor() {
 
     suspend fun startListening(
         onResult: (Note?, Float, Float, Boolean) -> Unit
-    ) = withContext(Dispatchers.IO) {
-        try {
-            val minBufferSize = AudioRecord.getMinBufferSize(
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT
-            )
-            
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                minBufferSize.coerceAtLeast(BUFFER_SIZE * 2)
-            )
-
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+    ) = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            try {
+                // 1. Ensure any previous state is cleaned up
                 isRunning = false
-                return@withContext
-            }
+                cleanupResources()
 
-            audioRecord?.startRecording()
-            isRunning = true
+                val minBufferSize = AudioRecord.getMinBufferSize(
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT
+                )
+                
+                audioRecord = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    SAMPLE_RATE,
+                    AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT,
+                    minBufferSize.coerceAtLeast(BUFFER_SIZE * 2)
+                )
 
-            val buffer = ShortArray(BUFFER_SIZE)
-            val floatBuffer = FloatArray(BUFFER_SIZE)
-            val yin = Yin(SAMPLE_RATE.toFloat(), BUFFER_SIZE)
-
-            // Reset state
-            resetFilters()
-
-            while (isRunning) {
-                val read = audioRecord?.read(buffer, 0, BUFFER_SIZE) ?: 0
-                if (read > 0) {
-                    // 1. Calculate Amplitude (RMS)
-                    var sum = 0.0
-                    for (i in 0 until read) {
-                        floatBuffer[i] = buffer[i].toFloat() / Short.MAX_VALUE
-                        sum += floatBuffer[i] * floatBuffer[i]
-                    }
-                    val rms = sqrt(sum / read).toFloat()
-                    
-                    // 2. Detect Pitch using TarsosDSP YIN
-                    val result = yin.getPitch(floatBuffer)
-                    val frequency = result.pitch
-                    val probability = result.probability
-                    
-                    // 3. Apply Filtering Logic
-                    val filteredNote = processPitch(frequency, probability, rms)
-                    
-                    // 4. Determine Stability for UI
-                    val isStable = filteredNote != null && 
-                                  filteredNote == lastStableNote && 
-                                  consecutiveCount >= MIN_STABLE_FRAMES
-                    
-                    onResult(filteredNote, frequency, rms, isStable)
+                if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                    Log.e(TAG, "AudioRecord failed to initialize")
+                    return@withContext
                 }
+
+                audioRecord?.startRecording()
+                isRunning = true
+
+                val buffer = ShortArray(BUFFER_SIZE)
+                val floatBuffer = FloatArray(BUFFER_SIZE)
+                val yin = Yin(SAMPLE_RATE.toFloat(), BUFFER_SIZE)
+
+                // Reset state
+                resetFilters()
+
+                Log.d(TAG, "Pitch detection loop started")
+
+                while (isRunning && isActive) {
+                    // Use a local reference to avoid race conditions if audioRecord is nulled elsewhere
+                    val currentRecord = audioRecord 
+                    val read = currentRecord?.read(buffer, 0, BUFFER_SIZE) ?: 0
+                    
+                    if (read > 0 && isRunning && isActive) {
+                        // 1. Calculate Amplitude (RMS)
+                        var sum = 0.0
+                        for (i in 0 until read) {
+                            floatBuffer[i] = buffer[i].toFloat() / Short.MAX_VALUE
+                            sum += floatBuffer[i] * floatBuffer[i]
+                        }
+                        val rms = sqrt(sum / read).toFloat()
+                        
+                        // 2. Detect Pitch using TarsosDSP YIN
+                        val result = yin.getPitch(floatBuffer)
+                        val frequency = result.pitch
+                        val probability = result.probability
+                        
+                        // 3. Apply Filtering Logic
+                        val filteredNote = processPitch(frequency, probability, rms)
+                        
+                        // 4. Determine Stability for UI
+                        val isStable = filteredNote != null && 
+                                      filteredNote == lastStableNote && 
+                                      consecutiveCount >= MIN_STABLE_FRAMES
+                        
+                        onResult(filteredNote, frequency, rms, isStable)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in listening loop: ${e.message}")
+            } finally {
+                Log.d(TAG, "Pitch detection loop exiting, cleaning up...")
+                isRunning = false
+                cleanupResources()
             }
-        } catch (_: Exception) {
-            isRunning = false
-        } finally {
-            stopListening()
         }
+    }
+
+    private fun cleanupResources() {
+        try {
+            audioRecord?.apply {
+                if (recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                    stop()
+                }
+                release()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing AudioRecord: ${e.message}")
+        }
+        audioRecord = null
     }
 
     private fun processPitch(frequency: Float, probability: Float, amplitude: Float): Note? {
@@ -155,10 +190,11 @@ class PitchDetector @Inject constructor() {
 
     fun stopListening() {
         isRunning = false
+        // Request stop immediately to unblock any pending read()
         try {
             audioRecord?.stop()
-            audioRecord?.release()
-        } catch (_: Exception) {}
-        audioRecord = null
+        } catch (e: Exception) {
+            Log.w(TAG, "Error calling stop on AudioRecord: ${e.message}")
+        }
     }
 }
