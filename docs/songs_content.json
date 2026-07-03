@@ -104,6 +104,21 @@
             ["F5","G5","E5","E5"],
             ["D5","C5","C5","D5"]
         ]
+    },
+    {
+        "songId": "om_shanti_om_title_track",
+        "title": "Om Shanti Om (Title Track)",
+        "description": "Play the iconic title track from Om Shanti Om.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["C5", "C#5", "C5", "C#5", "C5", "C#5", "C5", "A#4", "G#4"],
+            ["G#4", "A#4", "G#4", "A#4", "G#4", "A#4", "G#4", "G4", "F4"],
+            ["F4", "G4", "F4", "G4", "F4", "G4", "F4", "D#4", "C#4"],
+            ["C4"]
+        ]
     }
 
 ]
