@@ -119,6 +119,19 @@
             ["F4", "G4", "F4", "G4", "F4", "G4", "F4", "D#4", "C#4"],
             ["C4"]
         ]
+    },
+    {
+        "songId": "death_note_theme",
+        "title": "Death Note Theme",
+        "description": "Play the iconic Death Note theme melody.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["G5", "E5", "A5", "E5", "F#5", "G5", "E5"],
+            ["B5", "A5", "G5", "F#5", "E5", "D5"]
+        ]
     }
 
 ]
