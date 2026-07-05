@@ -1,6 +1,7 @@
 package com.pianoscales.learnmusic.ui.songs
 
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -16,7 +17,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -157,6 +160,7 @@ fun ComposerSetupScreen(
     onBack: () -> Unit,
     isEditMode: Boolean
 ) {
+    val context = LocalContext.current
     Scaffold(
         containerColor = PrimaryBackground,
         topBar = {
@@ -220,18 +224,22 @@ fun ComposerSetupScreen(
             Spacer(modifier = Modifier.height(12.dp))
             
             InputModeOption(
-                selected = pianoMode == PianoMode.EXTERNAL,
-                onClick = { onPianoModeChange(PianoMode.EXTERNAL) },
+                selected = false, // Cannot be selected
+                onClick = { 
+                    Toast.makeText(context, "External Piano support is coming soon.", Toast.LENGTH_SHORT).show()
+                },
                 icon = "🎹",
                 title = "External Piano",
-                description = "Record notes from your real piano via microphone."
+                description = "Record notes from your real piano via microphone.",
+                enabled = false,
+                isComingSoon = true
             )
             
             Spacer(modifier = Modifier.height(48.dp))
             
             Button(
                 onClick = onContinue,
-                enabled = title.isNotBlank(),
+                enabled = title.isNotBlank() && pianoMode != PianoMode.EXTERNAL,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
                 shape = RoundedCornerShape(12.dp),
@@ -249,7 +257,9 @@ fun InputModeOption(
     onClick: () -> Unit,
     icon: String,
     title: String,
-    description: String
+    description: String,
+    enabled: Boolean = true,
+    isComingSoon: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -257,7 +267,11 @@ fun InputModeOption(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) PrimaryAccent.copy(alpha = 0.1f) else CardSurface
+            containerColor = when {
+                selected -> PrimaryAccent.copy(alpha = 0.1f)
+                !enabled -> CardSurface.copy(alpha = 0.5f)
+                else -> CardSurface
+            }
         ),
         border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, PrimaryAccent) else null
     ) {
@@ -265,19 +279,40 @@ fun InputModeOption(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(icon, fontSize = 32.sp)
+            Text(
+                text = icon, 
+                fontSize = 32.sp,
+                modifier = Modifier.alpha(if (enabled) 1f else 0.5f)
+            )
             Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (selected) PrimaryAccent else TextPrimary
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (selected) PrimaryAccent else if (enabled) TextPrimary else TextMuted
+                    )
+                    if (isComingSoon) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = PrimaryAccent.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "COMING SOON",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryAccent
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = if (enabled) TextSecondary else TextMuted
                 )
             }
         }
