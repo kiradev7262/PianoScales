@@ -13,7 +13,9 @@ data class SongsPackUiState(
     val songs: List<Song> = emptyList(),
     val customSongs: List<Song> = emptyList(),
     val pianoMode: PianoMode = PianoMode.VIRTUAL,
-    val showOnboarding: Boolean = false
+    val showOnboarding: Boolean = false,
+    val isExporting: Boolean = false,
+    val selectedExportSongIds: Set<String> = emptySet()
 )
 
 @HiltViewModel
@@ -47,6 +49,36 @@ class SongsPackViewModel @Inject constructor(
         viewModelScope.launch {
             songRepository.deleteSong(songId)
         }
+    }
+
+    fun startExport() {
+        _uiState.update { it.copy(isExporting = true, selectedExportSongIds = emptySet()) }
+    }
+
+    fun dismissExport() {
+        _uiState.update { it.copy(isExporting = false, selectedExportSongIds = emptySet()) }
+    }
+
+    fun toggleSongSelection(songId: String) {
+        _uiState.update { state ->
+            val current = state.selectedExportSongIds
+            val new = if (current.contains(songId)) {
+                current - songId
+            } else {
+                current + songId
+            }
+            state.copy(selectedExportSongIds = new)
+        }
+    }
+
+    fun selectAllSongs() {
+        _uiState.update { state ->
+            state.copy(selectedExportSongIds = state.customSongs.map { it.songId }.toSet())
+        }
+    }
+
+    fun deselectAllSongs() {
+        _uiState.update { it.copy(selectedExportSongIds = emptySet()) }
     }
 
 

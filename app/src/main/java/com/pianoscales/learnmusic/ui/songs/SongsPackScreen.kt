@@ -1,5 +1,6 @@
 package com.pianoscales.learnmusic.ui.songs
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -8,10 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pianoscales.learnmusic.ui.components.PianoScalesHomeTopBar
 import com.pianoscales.learnmusic.ui.theme.*
+import com.pianoscales.learnmusic.util.SongExportManager
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,9 +37,16 @@ fun SongsPackScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     
     var songToDelete by remember { mutableStateOf<Song?>(null) }
+
+    val shareLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        viewModel.dismissExport()
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -127,13 +133,26 @@ fun SongsPackScreen(
             
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "My Songs",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "My Songs",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                
+                if (uiState.customSongs.isNotEmpty()) {
+                    TextButton(onClick = { viewModel.startExport() }) {
+                        Text("Export", color = PrimaryAccent)
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -180,6 +199,127 @@ fun SongsPackScreen(
             titleContentColor = TextPrimary,
             textContentColor = TextSecondary
         )
+    }
+
+    if (uiState.isExporting) {
+        ExportSongsBottomSheet(
+            customSongs = uiState.customSongs,
+            selectedSongIds = uiState.selectedExportSongIds,
+            onDismiss = { viewModel.dismissExport() },
+            onToggleSelection = { viewModel.toggleSongSelection(it) },
+            onSelectAll = { viewModel.selectAllSongs() },
+            onDeselectAll = { viewModel.deselectAllSongs() },
+            onExport = {
+                val selectedSongs = uiState.customSongs.filter { uiState.selectedExportSongIds.contains(it.songId) }
+                val intent = SongExportManager.exportSongs(context, selectedSongs)
+                if (intent != null) {
+                    shareLauncher.launch(Intent.createChooser(intent, "Export Songs"))
+                } else {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("Failed to export songs.")
+                    }
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExportSongsBottomSheet(
+    customSongs: List<Song>,
+    selectedSongIds: Set<String>,
+    onDismiss: () -> Unit,
+    onToggleSelection: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onDeselectAll: () -> Unit,
+    onExport: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = CardSurface,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = TextMuted) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Select Songs",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                customSongs.forEach { song ->
+                    val isSelected = selectedSongIds.contains(song.songId)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onToggleSelection(song.songId) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = { onToggleSelection(song.songId) },
+                            colors = CheckboxDefaults.colors(checkedColor = PrimaryAccent)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = TextMuted.copy(alpha = 0.2f))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val allSelected = selectedSongIds.size == customSongs.size && customSongs.isNotEmpty()
+                TextButton(onClick = { if (allSelected) onDeselectAll() else onSelectAll() }) {
+                    Text(
+                        text = if (allSelected) "Deselect All" else "Select All",
+                        color = PrimaryAccent
+                    )
+                }
+                
+                Row {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel", color = TextMuted)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onExport,
+                        enabled = selectedSongIds.isNotEmpty(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryAccent,
+                            disabledContainerColor = PrimaryAccent.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Text("Export")
+                    }
+                }
+            }
+        }
     }
 }
 
