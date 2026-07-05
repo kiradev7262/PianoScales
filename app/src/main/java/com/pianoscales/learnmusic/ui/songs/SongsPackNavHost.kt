@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 sealed class SongsPackRoute(val route: String) {
     object Home : SongsPackRoute("songs_pack_home")
     object Coach : SongsPackRoute("songs_pack_coach")
+    object Composer : SongsPackRoute("songs_pack_composer")
 }
 
 @Composable
@@ -24,6 +25,12 @@ fun SongsPackNavHost() {
             SongsPackScreen(
                 onStartSong = { song ->
                     navController.navigate("${SongsPackRoute.Coach.route}/${song.songId}")
+                },
+                onCreateSong = {
+                    navController.navigate(SongsPackRoute.Composer.route)
+                },
+                onEditSong = { song ->
+                    navController.navigate("${SongsPackRoute.Composer.route}?songId=${song.songId}")
                 }
             )
         }
@@ -32,6 +39,20 @@ fun SongsPackNavHost() {
             arguments = listOf(navArgument("songId") { type = NavType.StringType })
         ) {
             SongCoachScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "${SongsPackRoute.Composer.route}?songId={songId}",
+            arguments = listOf(
+                navArgument("songId") { 
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            SongComposerScreen(
                 onBack = { navController.popBackStack() }
             )
         }

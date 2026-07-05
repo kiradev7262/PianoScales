@@ -11,6 +11,7 @@ import javax.inject.Inject
 
 data class SongsPackUiState(
     val songs: List<Song> = emptyList(),
+    val customSongs: List<Song> = emptyList(),
     val pianoMode: PianoMode = PianoMode.VIRTUAL,
     val showOnboarding: Boolean = false
 )
@@ -33,10 +34,21 @@ class SongsPackViewModel @Inject constructor(
             _uiState.update { it.copy(songs = songs) }
         }.launchIn(viewModelScope)
 
+        songRepository.getCustomSongs().onEach { customSongs ->
+            _uiState.update { it.copy(customSongs = customSongs) }
+        }.launchIn(viewModelScope)
+
         settingsRepository.getPianoMode().onEach { mode ->
             _uiState.update { it.copy(pianoMode = mode) }
         }.launchIn(viewModelScope)
     }
+
+    fun deleteSong(songId: String) {
+        viewModelScope.launch {
+            songRepository.deleteSong(songId)
+        }
+    }
+
 
     fun toggleExternalPianoMode(enabled: Boolean) {
         if (enabled) {

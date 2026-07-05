@@ -8,6 +8,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,11 +32,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun SongsPackScreen(
     onStartSong: (Song) -> Unit,
+    onCreateSong: () -> Unit,
+    onEditSong: (Song) -> Unit,
     viewModel: SongsPackViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    var songToDelete by remember { mutableStateOf<Song?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -91,7 +98,15 @@ fun SongsPackScreen(
                 onToggle = { viewModel.toggleExternalPianoMode(it) }
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Songs",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "Learn your favorite melodies one note at a time.",
@@ -110,10 +125,98 @@ fun SongsPackScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
             
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "My Songs",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
+
+            CreateSongTile(onClick = onCreateSong)
+            
+            Spacer(modifier = Modifier.height(12.dp))
+
+            uiState.customSongs.forEach { song ->
+                SongTile(
+                    song = song,
+                    onClick = { onStartSong(song) },
+                    onEdit = { onEditSong(song) },
+                    onDelete = { songToDelete = song }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+
+    if (songToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { songToDelete = null },
+            title = { Text("Delete Song") },
+            text = { Text("Are you sure you want to delete '${songToDelete?.title}'?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        songToDelete?.let { viewModel.deleteSong(it.songId) }
+                        songToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { songToDelete = null }) {
+                    Text("Cancel", color = TextMuted)
+                }
+            },
+            containerColor = CardSurface,
+            titleContentColor = TextPrimary,
+            textContentColor = TextSecondary
+        )
+    }
+}
+
+@Composable
+fun CreateSongTile(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.1f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                tint = PrimaryAccent,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Create New Song",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryAccent
+            )
         }
     }
 }
+
 
 @Composable
 fun ExternalPianoPreferenceTile(
@@ -238,7 +341,9 @@ fun ExternalPianoOnboardingDialog(
 @Composable
 fun SongTile(
     song: Song,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -254,7 +359,7 @@ fun SongTile(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = song.title,
                     style = MaterialTheme.typography.titleLarge,
@@ -281,12 +386,24 @@ fun SongTile(
                 }
             }
             
-            Icon(
-                Icons.Default.PlayArrow,
-                contentDescription = "Play",
-                tint = PrimaryAccent,
-                modifier = Modifier.size(32.dp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onEdit != null) {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = TextMuted)
+                    }
+                }
+                if (onDelete != null) {
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.6f))
+                    }
+                }
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = "Play",
+                    tint = PrimaryAccent,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
     }
 }

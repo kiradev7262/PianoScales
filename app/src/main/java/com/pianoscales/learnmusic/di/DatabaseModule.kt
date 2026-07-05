@@ -35,4 +35,9 @@ object DatabaseModule {
     fun provideUserProfileDao(database: ProgressDatabase): com.pianoscales.learnmusic.data.local.UserProfileDao {
         return database.userProfileDao()
     }
+
+    @Provides
+    fun provideCustomSongDao(database: ProgressDatabase): com.pianoscales.learnmusic.data.local.CustomSongDao {
+        return database.customSongDao()
+    }
 }

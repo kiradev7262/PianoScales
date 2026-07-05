@@ -46,8 +46,13 @@ class SongCoachViewModel @Inject constructor(
         val songId: String? = savedStateHandle["songId"]
         if (songId != null) {
             viewModelScope.launch {
-                songRepository.getSongs().collect { songs ->
-                    val song = songs.find { it.songId == songId }
+                combine(
+                    songRepository.getSongs(),
+                    songRepository.getCustomSongs()
+                ) { builtIn, custom ->
+                    builtIn + custom
+                }.collect { allSongs ->
+                    val song = allSongs.find { it.songId == songId }
                     if (song != null) {
                         _uiState.update { it.copy(song = song) }
                     }
