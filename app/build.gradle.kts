@@ -21,9 +21,13 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        buildConfigField("boolean", "EXPORT_IMPORT_ENABLED", "false")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "EXPORT_IMPORT_ENABLED", "true")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -43,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {

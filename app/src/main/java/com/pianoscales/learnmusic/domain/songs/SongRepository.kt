@@ -11,4 +11,5 @@ interface SongRepository {
     suspend fun saveSong(song: Song)
     suspend fun deleteSong(songId: String)
     suspend fun getSongById(songId: String): Song?
+    fun parseSongsFromJson(jsonString: String): List<Song>
 }

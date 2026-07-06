@@ -167,6 +167,19 @@ class SongRepositoryImpl @Inject constructor(
         _songs.value = currentSongs
     }
 
+    override fun parseSongsFromJson(jsonString: String): List<Song> {
+        return try {
+            val jsonObject = org.json.JSONObject(jsonString)
+            if (jsonObject.has("songs")) {
+                parseSongs(jsonObject.getJSONArray("songs").toString())
+            } else {
+                parseSongs(jsonString)
+            }
+        } catch (e: Exception) {
+            parseSongs(jsonString)
+        }
+    }
+
     private fun parseSongs(jsonString: String): List<Song> {
         val songsList = mutableListOf<Song>()
         try {

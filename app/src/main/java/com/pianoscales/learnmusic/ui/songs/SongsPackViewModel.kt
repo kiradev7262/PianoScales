@@ -15,7 +15,10 @@ data class SongsPackUiState(
     val pianoMode: PianoMode = PianoMode.VIRTUAL,
     val showOnboarding: Boolean = false,
     val isExporting: Boolean = false,
-    val selectedExportSongIds: Set<String> = emptySet()
+    val selectedExportSongIds: Set<String> = emptySet(),
+    val pendingImportSongs: List<Song> = emptyList(),
+    val duplicateSong: Song? = null,
+    val importError: String? = null
 )
 
 @HiltViewModel
@@ -79,6 +82,66 @@ class SongsPackViewModel @Inject constructor(
 
     fun deselectAllSongs() {
         _uiState.update { it.copy(selectedExportSongIds = emptySet()) }
+    }
+
+    fun onImportSelected(jsonString: String) {
+        val songs = songRepository.parseSongsFromJson(jsonString)
+        if (songs.isEmpty()) {
+            _uiState.update { it.copy(importError = "No valid songs found in the file.") }
+        } else {
+            _uiState.update { it.copy(pendingImportSongs = songs, importError = null) }
+            processNextImport()
+        }
+    }
+
+    private fun processNextImport() {
+        val nextSong = _uiState.value.pendingImportSongs.firstOrNull()
+        if (nextSong == null) {
+            _uiState.update { it.copy(duplicateSong = null) }
+            return
+        }
+
+        viewModelScope.launch {
+            val existing = songRepository.getSongById(nextSong.songId)
+            if (existing != null) {
+                _uiState.update { it.copy(duplicateSong = nextSong) }
+            } else {
+                saveImportedSong(nextSong)
+            }
+        }
+    }
+
+    fun replaceDuplicate() {
+        _uiState.value.duplicateSong?.let { song ->
+            viewModelScope.launch {
+                saveImportedSong(song)
+            }
+        }
+    }
+
+    fun skipDuplicate() {
+        _uiState.update { state ->
+            state.copy(
+                pendingImportSongs = state.pendingImportSongs.drop(1),
+                duplicateSong = null
+            )
+        }
+        processNextImport()
+    }
+
+    private suspend fun saveImportedSong(song: Song) {
+        songRepository.saveSong(song.copy(builtIn = false)) // Ensure it's treated as custom
+        _uiState.update { state ->
+            state.copy(
+                pendingImportSongs = state.pendingImportSongs.drop(1),
+                duplicateSong = null
+            )
+        }
+        processNextImport()
+    }
+
+    fun clearImportError() {
+        _uiState.update { it.copy(importError = null) }
     }
 
 

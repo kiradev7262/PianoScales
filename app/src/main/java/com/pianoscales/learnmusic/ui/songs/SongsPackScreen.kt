@@ -1,6 +1,7 @@
 package com.pianoscales.learnmusic.ui.songs
 
 import android.content.Intent
+import com.pianoscales.learnmusic.BuildConfig
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -46,6 +47,30 @@ fun SongsPackScreen(
         ActivityResultContracts.StartActivityForResult()
     ) {
         viewModel.dismissExport()
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.openInputStream(it)?.use { inputStream ->
+                    val jsonString = inputStream.bufferedReader().use { reader -> reader.readText() }
+                    viewModel.onImportSelected(jsonString)
+                }
+            } catch (e: Exception) {
+                scope.launch {
+                    snackbarHostState.showSnackbar("Error reading file: ${e.message}")
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.importError) {
+        uiState.importError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearImportError()
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -147,9 +172,16 @@ fun SongsPackScreen(
                     color = TextPrimary
                 )
                 
-                if (uiState.customSongs.isNotEmpty()) {
-                    TextButton(onClick = { viewModel.startExport() }) {
-                        Text("Export", color = PrimaryAccent)
+                if (BuildConfig.EXPORT_IMPORT_ENABLED) {
+                    Row {
+                        TextButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {
+                            Text("Import", color = PrimaryAccent)
+                        }
+                        if (uiState.customSongs.isNotEmpty()) {
+                            TextButton(onClick = { viewModel.startExport() }) {
+                                Text("Export", color = PrimaryAccent)
+                            }
+                        }
                     }
                 }
             }
@@ -220,6 +252,30 @@ fun SongsPackScreen(
                     }
                 }
             }
+        )
+    }
+
+    if (uiState.duplicateSong != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.skipDuplicate() },
+            title = { Text("Duplicate Song") },
+            text = { Text("Song '${uiState.duplicateSong?.title}' already exists. Would you like to replace it?") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.replaceDuplicate() },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
+                ) {
+                    Text("Replace")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.skipDuplicate() }) {
+                    Text("Skip", color = TextMuted)
+                }
+            },
+            containerColor = CardSurface,
+            titleContentColor = TextPrimary,
+            textContentColor = TextSecondary
         )
     }
 }
