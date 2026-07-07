@@ -241,6 +241,56 @@
                 "A4"
             ]
         ]
+    },
+    {
+        "songId": "d2a19f5b-022f-49a8-9b64-1a6fd890e254",
+        "title": "Hume Tumse Pyaar",
+        "description": "Hume Tumse Pyaar hai kitna ",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            [
+                "E4",
+                "F4",
+                "G4",
+                "G4",
+                "A4",
+                "A4",
+                "A4"
+            ],
+            [
+                "B4",
+                "B4",
+                "D5",
+                "B4",
+                "A4",
+                "G4",
+                "F#4",
+                "G4"
+            ],
+            [
+                "B4",
+                "A4",
+                "G4",
+                "E4",
+                "E4",
+                "F4",
+                "G4",
+                "E4",
+                "D4"
+            ],
+            [
+                "D4",
+                "G4",
+                "D4",
+                "F4",
+                "E4",
+                "G#4",
+                "A4"
+            ]
+        ]
     }
 
 
