@@ -381,6 +381,75 @@
                 "A4"
             ]
         ]
+    },
+    {
+        "songId": "446b8269-fe2d-4afb-939a-a7aab3403154",
+        "title": "Chura Liya",
+        "description": "Chura Liya hai tumne",
+        "difficulty": "Beginner",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G4",
+                "D4"
+            ],
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G#4"
+            ],
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G4",
+                "D4"
+            ],
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G#4"
+            ]
+        ]
     }
 
 
