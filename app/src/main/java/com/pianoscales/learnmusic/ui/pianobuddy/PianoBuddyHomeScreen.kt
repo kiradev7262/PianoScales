@@ -1,28 +1,85 @@
 package com.pianoscales.learnmusic.ui.pianobuddy
 
+import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pianoscales.learnmusic.BuildConfig
 import com.pianoscales.learnmusic.ble.BleConnectionState
+import com.pianoscales.learnmusic.ble.BleDevice
 import com.pianoscales.learnmusic.ui.components.PianoScalesHomeTopBar
 import com.pianoscales.learnmusic.ui.theme.*
 
 @Composable
 fun PianoBuddyHomeScreen(
     onNavigateToFreestyle: () -> Unit,
-    viewModel: PianoBuddyViewModel = hiltViewModel()
+    viewModel: PianoBuddyViewModel = hiltViewModel(),
 ) {
+    val context = LocalContext.current
     val connectionState by viewModel.connectionState.collectAsState()
+    val discoveredDevices by viewModel.discoveredDevices.collectAsState()
     val isConnected = connectionState == BleConnectionState.CONNECTED
+
+    val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT
+        )
+    } else {
+        arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions.values.all { it }) {
+            viewModel.startScan()
+        }
+    }
+
+    val bluetoothLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        viewModel.startScan()
+    }
+
+    fun handleConnect() {
+        val hasPermissions = permissionsToRequest.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+        if (hasPermissions) {
+            viewModel.startScan()
+        } else {
+            permissionLauncher.launch(permissionsToRequest)
+        }
+    }
 
     Scaffold(
         containerColor = PrimaryBackground,
@@ -36,30 +93,123 @@ fun PianoBuddyHomeScreen(
                 .padding(padding)
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Bluetooth Status",
-                style = MaterialTheme.typography.titleMedium,
-                color = TextMuted
-            )
-
             StatusIndicator(connectionState)
 
-            Button(
-                onClick = {
-                    if (isConnected) viewModel.disconnect() else viewModel.connect()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isConnected) Color.Gray else PrimaryAccent
-                )
-            ) {
-                Text(if (isConnected) "Disconnect Piano Buddy" else "Connect Piano Buddy")
+            // Connection Actions
+            when (connectionState) {
+                BleConnectionState.BLUETOOTH_DISABLED -> {
+                    Button(
+                        onClick = {
+                            bluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
+                    ) {
+                        Text("Enable Bluetooth")
+                    }
+                }
+                BleConnectionState.TIMEOUT -> {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { handleConnect() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Retry Connection")
+                        }
+                        var showHelpDialog by remember { mutableStateOf(false) }
+                        OutlinedButton(
+                            onClick = { showHelpDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryAccent)
+                        ) {
+                            Text("Help & Troubleshooting")
+                        }
+                        
+                        if (showHelpDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showHelpDialog = false },
+                                title = { Text("Connection Help") },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("1. Ensure your Piano Buddy (ESP32) is powered on.")
+                                        Text("2. Make sure it's within 5-10 meters.")
+                                        Text("3. Check if it's already connected to another device.")
+                                        Text("4. Use nRF Connect to verify the device is advertising.")
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = { showHelpDialog = false }) {
+                                        Text("Got it")
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+                BleConnectionState.FAILED, BleConnectionState.DISCONNECTED, BleConnectionState.IDLE -> {
+                    Button(
+                        onClick = { handleConnect() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (connectionState == BleConnectionState.IDLE) "Connect Piano Buddy" else "Retry Connection")
+                    }
+                }
+                BleConnectionState.CONNECTED -> {
+                    Button(
+                        onClick = { viewModel.disconnect() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
+                    ) {
+                        Text("Disconnect Piano Buddy")
+                    }
+                }
+                else -> {
+                    CircularProgressIndicator(color = PrimaryAccent)
+                }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = CardSurface)
+            // Discovered Devices List
+            AnimatedVisibility(
+                visible = (connectionState == BleConnectionState.SCANNING || connectionState == BleConnectionState.DEVICE_FOUND) 
+                        && discoveredDevices.isNotEmpty()
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Discovered Devices",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = TextMuted,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CardSurface)
+                    ) {
+                        items(discoveredDevices) { device ->
+                            DeviceItem(device) {
+                                viewModel.stopScan()
+                                viewModel.connectToDevice(device)
+                            }
+                            HorizontalDivider(color = PrimaryBackground.copy(alpha = 0.5f))
+                        }
+                    }
+                }
+            }
 
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = CardSurface)
+
+            // Freestyle Entry
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = { if (isConnected) onNavigateToFreestyle() },
@@ -90,6 +240,22 @@ fun PianoBuddyHomeScreen(
                     color = PrimaryAccent
                 )
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Debug Panel
+            val bluetoothManager = context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
+            DebugPanel(
+                state = connectionState,
+                devices = discoveredDevices,
+                isBluetoothEnabled = bluetoothManager.adapter?.isEnabled == true,
+                hasPermissions = permissionsToRequest.all {
+                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                }
+            )
+
+            // nRF Connect Helper
+            NRFConnectHelper { viewModel.openNRFConnect(context) }
         }
     }
 }
@@ -97,14 +263,23 @@ fun PianoBuddyHomeScreen(
 @Composable
 fun StatusIndicator(state: BleConnectionState) {
     val (text, color) = when (state) {
-        BleConnectionState.DISCONNECTED -> "Disconnected" to Color.Red
+        BleConnectionState.IDLE -> "Ready to connect" to Color.Gray
+        BleConnectionState.CHECKING_BLUETOOTH -> "Checking Bluetooth..." to Color.Yellow
+        BleConnectionState.BLUETOOTH_DISABLED -> "Bluetooth is turned off" to Color.Red
+        BleConnectionState.CHECKING_PERMISSIONS -> "Checking permissions..." to Color.Yellow
+        BleConnectionState.SCANNING -> "Searching for Piano Buddy..." to Color.Cyan
+        BleConnectionState.DEVICE_FOUND -> "Piano Buddy found" to Color.Blue
         BleConnectionState.CONNECTING -> "Connecting..." to Color.Yellow
+        BleConnectionState.DISCOVERING_SERVICES -> "Discovering services..." to Color.Yellow
         BleConnectionState.CONNECTED -> "Connected" to Color.Green
+        BleConnectionState.FAILED -> "Connection failed" to Color.Red
+        BleConnectionState.DISCONNECTED -> "Disconnected" to Color.Red
+        BleConnectionState.TIMEOUT -> "No Piano Buddy found nearby" to Color.Red
     }
 
     Surface(
         color = color.copy(alpha = 0.1f),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(16.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.5f))
     ) {
         Text(
@@ -112,7 +287,125 @@ fun StatusIndicator(state: BleConnectionState) {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             color = color,
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
+            fontSize = 16.sp
         )
+    }
+}
+
+@Composable
+fun DeviceItem(device: BleDevice, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = device.name ?: "Unknown Device",
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextPrimary
+            )
+            if (BuildConfig.DEBUG) {
+                Text(
+                    text = device.address,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
+                )
+            }
+        }
+        Text(
+            text = "RSSI: ${device.rssi}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (device.rssi > -70) Color.Green else Color.Yellow
+        )
+    }
+}
+
+@Composable
+fun DebugPanel(
+    state: BleConnectionState,
+    devices: List<BleDevice>,
+    isBluetoothEnabled: Boolean,
+    hasPermissions: Boolean
+) {
+    var showDebug by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Developer Debug",
+            style = MaterialTheme.typography.labelLarge,
+            color = TextMuted,
+            modifier = Modifier
+                .clickable { showDebug = !showDebug }
+                .padding(vertical = 4.dp)
+        )
+        
+        AnimatedVisibility(visible = showDebug) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .padding(12.dp)
+            ) {
+                DebugLine("Bluetooth Enabled", isBluetoothEnabled.toString())
+                DebugLine("Permissions Granted", hasPermissions.toString())
+                DebugLine("State", state.name)
+                DebugLine("Devices Found", devices.size.toString())
+                if (devices.isNotEmpty()) {
+                    DebugLine("Latest Device", devices.last().name ?: "Unknown")
+                    if (BuildConfig.DEBUG) {
+                        DebugLine("MAC", devices.last().address)
+                    }
+                    DebugLine("RSSI", devices.last().rssi.toString())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DebugLine(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = TextMuted)
+        Text(value, style = MaterialTheme.typography.labelSmall, color = PrimaryAccent)
+    }
+}
+
+@Composable
+fun NRFConnectHelper(onOpen: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Having trouble connecting?",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted
+        )
+        Text(
+            text = "Install nRF Connect and verify that your ESP32 is advertising correctly.",
+            style = MaterialTheme.typography.labelSmall,
+            color = TextMuted.copy(alpha = 0.7f),
+            modifier = Modifier.padding(bottom = 8.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Button(
+            onClick = onOpen,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                contentColor = PrimaryAccent
+            ),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Open nRF Connect", fontSize = 14.sp)
+        }
     }
 }

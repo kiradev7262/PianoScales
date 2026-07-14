@@ -29,8 +29,6 @@ import com.pianoscales.learnmusic.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-data class PianoKey(val note: Note, val octave: Int)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FreestyleScreen(
@@ -129,7 +127,7 @@ fun FreestyleScreen(
 
 @Composable
 fun FreestylePiano(
-    onNoteClick: (Note, Int) -> Unit,
+    onNoteClick: (com.pianoscales.learnmusic.theory.Note, Int) -> Unit,
     height: androidx.compose.ui.unit.Dp = 240.dp,
     blackKeyHeightRatio: Float = 0.55f,
     enabled: Boolean = true,
@@ -221,7 +219,7 @@ fun FreestylePiano(
 
 @Composable
 private fun WhiteKey(
-    note: Note,
+    note: com.pianoscales.learnmusic.theory.Note,
     octave: Int,
     isHighlighted: Boolean,
     onDown: () -> Unit,
@@ -260,7 +258,7 @@ private fun WhiteKey(
 
 @Composable
 private fun BlackKey(
-    note: Note,
+    note: com.pianoscales.learnmusic.theory.Note,
     octave: Int,
     isHighlighted: Boolean,
     onDown: () -> Unit,
