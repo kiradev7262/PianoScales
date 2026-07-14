@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
@@ -25,6 +26,7 @@ import com.pianoscales.learnmusic.audio_intelligence.AudioIntelligenceNavHost
 import com.pianoscales.learnmusic.navigation.JourneyNavHost
 import com.pianoscales.learnmusic.ui.freestyle.FreestyleScreen
 import com.pianoscales.learnmusic.ui.me.MeNavHost
+import com.pianoscales.learnmusic.ui.pianobuddy.PianoBuddyNavHost
 import com.pianoscales.learnmusic.ui.songs.SongsPackNavHost
 import com.pianoscales.learnmusic.ui.theme.CardSurface
 import com.pianoscales.learnmusic.ui.theme.PrimaryAccent
@@ -35,6 +37,7 @@ sealed class BottomNavScreen(val route: String, val label: String, val icon: Ima
     object Freestyle : BottomNavScreen("freestyle_root", "Freestyle", Icons.Default.PlayArrow)
     object AudioIntelligence : BottomNavScreen("audio_intelligence_root", "Audio AI", Icons.Default.Star)
     object SongsPack : BottomNavScreen("songs_pack_root", "Songs", Icons.AutoMirrored.Filled.List)
+    object PianoBuddy : BottomNavScreen("piano_buddy_root", "Piano Buddy", Icons.Default.Info)
     object Me : BottomNavScreen("me_root", "Me", Icons.Default.Person)
 }
 
@@ -46,6 +49,7 @@ fun MainScreen() {
         BottomNavScreen.Freestyle,
         BottomNavScreen.AudioIntelligence,
         BottomNavScreen.SongsPack,
+        BottomNavScreen.PianoBuddy,
         BottomNavScreen.Me
     )
 
@@ -149,6 +153,9 @@ fun MainScreen() {
                         }
                     }
                 )
+            }
+            composable(BottomNavScreen.PianoBuddy.route) {
+                PianoBuddyNavHost()
             }
         }
     }

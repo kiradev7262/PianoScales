@@ -132,7 +132,8 @@ fun FreestylePiano(
     onNoteClick: (Note, Int) -> Unit,
     height: androidx.compose.ui.unit.Dp = 240.dp,
     blackKeyHeightRatio: Float = 0.55f,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    octaves: List<Int> = listOf(3, 4, 5, 6, 7)
 ) {
     val scrollState = rememberScrollState()
     val activeHighlights = remember { mutableStateMapOf<String, Boolean>() }
@@ -141,7 +142,6 @@ fun FreestylePiano(
     val blackKeyWidth = whiteKeyWidth * 0.65f
     val blackKeyHeight = height * blackKeyHeightRatio
     
-    val octaves = listOf(3, 4, 5, 6, 7)
     val whiteNotesPerOctave = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
     val blackKeyOffsets = listOf(
         Note.C_SHARP to 1f,
