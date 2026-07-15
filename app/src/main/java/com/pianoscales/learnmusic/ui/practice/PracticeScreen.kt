@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pianoscales.learnmusic.ble.BleConnectionState
 import com.pianoscales.learnmusic.theory.ConceptType
 import com.pianoscales.learnmusic.theory.Note
 import com.pianoscales.learnmusic.ui.components.PianoScalesDetailTopBar
@@ -301,7 +302,32 @@ fun PracticeTabContent(
             onKeyClick = { viewModel.onKeyClick(it) }
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+        PianoBuddyStatus(connectionState = uiState.pianoBuddyConnectionState)
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
 
+@Composable
+fun PianoBuddyStatus(connectionState: BleConnectionState) {
+    val (color, text) = when (connectionState) {
+        BleConnectionState.CONNECTED -> SuccessAccent to "🟢 PianoBuddy Connected"
+        else -> TextMuted to "🔴 PianoBuddy Not Connected"
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = color,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
