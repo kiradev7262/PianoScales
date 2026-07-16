@@ -1,6 +1,7 @@
 package com.pianoscales.learnmusic.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -94,9 +95,9 @@ fun MainScreen() {
         NavHost(
             navController = navController,
             startDestination = BottomNavScreen.Journey.route,
-            modifier = Modifier.padding(
-                bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp
-            )
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
         ) {
             composable(
                 route = BottomNavScreen.Journey.route + "?subRoute={subRoute}",
