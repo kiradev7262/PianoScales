@@ -113,6 +113,12 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
+    private fun sendGuidedMidiNotesToPianoBuddy(currentMidi: Int, nextMidi: Int) {
+        if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED && currentMidi != -1 && nextMidi != -1) {
+            pianoBuddyManager.sendGuidedMidiNotes(currentMidi, nextMidi)
+        }
+    }
+
     fun init(rootNote: Note, conceptType: ConceptType) {
         _uiState.update { 
             val theory = TheoryEngine.generateTheory(rootNote, conceptType, it.includeOctave)
@@ -281,7 +287,7 @@ class PracticeViewModel @Inject constructor(
             return
         }
 
-        var nextTargetMidiNote: Int? = null
+        var guidedNotes: Pair<Int, Int>? = null
 
         _uiState.update { currentState ->
             var newCompletedNotes = currentState.completedNotes
@@ -317,7 +323,9 @@ class PracticeViewModel @Inject constructor(
                             if (isCompleted) {
                                 onLessonCompleted(currentState.rootNote, currentState.conceptType)
                             } else {
-                                nextTargetMidiNote = getMidiNoteForIndex(nextIndex)
+                                val current = getMidiNoteForIndex(nextIndex)
+                                val next = getMidiNoteForIndex(nextIndex + 1).takeIf { it != -1 } ?: current
+                                guidedNotes = current to next
                             }
                         } else {
                             // Incorrect note - do NOT advance, do NOT add to completed notes
@@ -343,7 +351,7 @@ class PracticeViewModel @Inject constructor(
             )
         }
 
-        nextTargetMidiNote?.let { sendMidiNoteToPianoBuddy(it) }
+        guidedNotes?.let { (c, n) -> sendGuidedMidiNotesToPianoBuddy(c, n) }
     }
 
     fun startGuidedPractice() {
@@ -363,7 +371,9 @@ class PracticeViewModel @Inject constructor(
                 )
             )
         }
-        sendMidiNoteToPianoBuddy(getMidiNoteForIndex(0))
+        val currentMidi = getMidiNoteForIndex(0)
+        val nextMidi = getMidiNoteForIndex(1).takeIf { it != -1 } ?: currentMidi
+        sendGuidedMidiNotesToPianoBuddy(currentMidi, nextMidi)
     }
 
     fun startGuidedPracticeWithPermission() {

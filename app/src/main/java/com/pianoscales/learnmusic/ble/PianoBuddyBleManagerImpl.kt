@@ -177,6 +177,16 @@ class PianoBuddyBleManagerImpl @Inject constructor(
         gatt.writeCharacteristic(characteristic)
     }
 
+    @SuppressLint("MissingPermission")
+    override fun sendGuidedMidiNotes(currentMidi: Int, nextMidi: Int) {
+        val gatt = bluetoothGatt ?: return
+        val service = gatt.getService(SERVICE_UUID) ?: return
+        val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
+
+        characteristic.value = byteArrayOf(currentMidi.toByte(), nextMidi.toByte())
+        gatt.writeCharacteristic(characteristic)
+    }
+
     private val gattCallback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
