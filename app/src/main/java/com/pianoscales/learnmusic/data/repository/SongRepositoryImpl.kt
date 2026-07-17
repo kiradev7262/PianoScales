@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import javax.inject.Inject
@@ -75,19 +76,27 @@ class SongRepositoryImpl @Inject constructor(
     }
 
     private fun Song.toEntity(): CustomSongEntity {
-        val linesJson = JSONArray().apply {
-            lines.forEach { line ->
-                put(JSONArray().apply {
-                    line.notes.forEach { noteWithOctave ->
-                        val noteStr = "${noteWithOctave.note.name}${noteWithOctave.octave}"
-                        if (noteWithOctave.timestamp != null) {
-                            put(org.json.JSONObject().apply {
-                                put("n", noteStr)
-                                put("t", noteWithOctave.timestamp)
-                            })
-                        } else {
-                            put(noteStr)
+        val hasTimestamps = lines.any { line -> line.notes.any { it.timestamp != null } }
+        
+        val linesJson = JSONObject().apply {
+            put("lines", JSONArray().apply {
+                lines.forEach { line ->
+                    put(JSONArray().apply {
+                        line.notes.forEach { noteWithOctave ->
+                            put("${noteWithOctave.note.name}${noteWithOctave.octave}")
                         }
+                    })
+                }
+            })
+            
+            if (hasTimestamps) {
+                put("timestamps", JSONArray().apply {
+                    lines.forEach { line ->
+                        put(JSONArray().apply {
+                            line.notes.forEach { noteWithOctave ->
+                                put(noteWithOctave.timestamp ?: JSONObject.NULL)
+                            }
+                        })
                     }
                 })
             }
@@ -98,7 +107,7 @@ class SongRepositoryImpl @Inject constructor(
             title = title,
             description = description,
             difficulty = difficulty,
-            version = version,
+            version = if (hasTimestamps) 2 else version,
             linesJson = linesJson,
             createdAt = createdAt,
             modifiedAt = modifiedAt
@@ -108,22 +117,43 @@ class SongRepositoryImpl @Inject constructor(
     private fun CustomSongEntity.toDomain(): Song {
         val songLines = mutableListOf<SongLine>()
         try {
-            val linesArray = JSONArray(linesJson)
-            for (i in 0 until linesArray.length()) {
-                val notesArray = linesArray.getJSONArray(i)
-                val notes = mutableListOf<NoteWithOctave>()
-                for (j in 0 until notesArray.length()) {
-                    val noteEntry = notesArray.get(j)
-                    if (noteEntry is org.json.JSONObject) {
-                        val noteStr = noteEntry.getString("n")
-                        val timestamp = noteEntry.getLong("t")
-                        parseNote(noteStr)?.let { notes.add(it.copy(timestamp = timestamp)) }
-                    } else {
+            val trimmed = linesJson.trim()
+            if (trimmed.startsWith("{")) {
+                val root = JSONObject(linesJson)
+                val linesArray = root.getJSONArray("lines")
+                val timestampsArray = root.optJSONArray("timestamps")
+                
+                for (i in 0 until linesArray.length()) {
+                    val notesArray = linesArray.getJSONArray(i)
+                    val tsArray = timestampsArray?.optJSONArray(i)
+                    val notes = mutableListOf<NoteWithOctave>()
+                    
+                    for (j in 0 until notesArray.length()) {
                         val noteStr = notesArray.getString(j)
-                        parseNote(noteStr)?.let { notes.add(it) }
+                        val timestamp = if (tsArray != null && !tsArray.isNull(j)) tsArray.getLong(j) else null
+                        parseNote(noteStr)?.let { notes.add(it.copy(timestamp = timestamp)) }
                     }
+                    songLines.add(SongLine(notes))
                 }
-                songLines.add(SongLine(notes))
+            } else {
+                // Legacy format (JSONArray)
+                val linesArray = JSONArray(linesJson)
+                for (i in 0 until linesArray.length()) {
+                    val notesArray = linesArray.getJSONArray(i)
+                    val notes = mutableListOf<NoteWithOctave>()
+                    for (j in 0 until notesArray.length()) {
+                        val noteEntry = notesArray.get(j)
+                        if (noteEntry is JSONObject) {
+                            val noteStr = noteEntry.getString("n")
+                            val timestamp = noteEntry.getLong("t")
+                            parseNote(noteStr)?.let { notes.add(it.copy(timestamp = timestamp)) }
+                        } else {
+                            val noteStr = notesArray.getString(j)
+                            parseNote(noteStr)?.let { notes.add(it) }
+                        }
+                    }
+                    songLines.add(SongLine(notes))
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -198,24 +228,39 @@ class SongRepositoryImpl @Inject constructor(
     private fun parseSongs(jsonString: String): List<Song> {
         val songsList = mutableListOf<Song>()
         try {
-            val jsonArray = JSONArray(jsonString)
+            val trimmed = jsonString.trim()
+            val jsonArray = if (trimmed.startsWith("{")) {
+                val obj = JSONObject(jsonString)
+                if (obj.has("songs")) {
+                    obj.getJSONArray("songs")
+                } else {
+                    JSONArray().put(obj)
+                }
+            } else {
+                JSONArray(jsonString)
+            }
+
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
                 val linesArray = obj.getJSONArray("lines")
+                val timestampsArray = obj.optJSONArray("timestamps")
                 val songLines = mutableListOf<SongLine>()
                 
                 for (j in 0 until linesArray.length()) {
                     val notesArray = linesArray.getJSONArray(j)
+                    val tsArray = timestampsArray?.optJSONArray(j)
                     val notes = mutableListOf<NoteWithOctave>()
+                    
                     for (k in 0 until notesArray.length()) {
                         val noteEntry = notesArray.get(k)
-                        if (noteEntry is org.json.JSONObject) {
+                        if (noteEntry is JSONObject) {
                             val noteStr = noteEntry.getString("n")
                             val timestamp = noteEntry.getLong("t")
                             parseNote(noteStr)?.let { notes.add(it.copy(timestamp = timestamp)) }
                         } else {
                             val noteStr = notesArray.getString(k)
-                            parseNote(noteStr)?.let { notes.add(it) }
+                            val timestamp = if (tsArray != null && !tsArray.isNull(k)) tsArray.getLong(k) else null
+                            parseNote(noteStr)?.let { notes.add(it.copy(timestamp = timestamp)) }
                         }
                     }
                     songLines.add(SongLine(notes))
@@ -227,9 +272,11 @@ class SongRepositoryImpl @Inject constructor(
                         title = obj.getString("title"),
                         description = obj.getString("description"),
                         difficulty = obj.getString("difficulty"),
-                        version = obj.getInt("version"),
+                        version = obj.optInt("version", 1),
                         lines = songLines,
-                        builtIn = obj.optBoolean("builtIn", false)
+                        builtIn = obj.optBoolean("builtIn", false),
+                        createdAt = obj.optLong("createdAt", 0L),
+                        modifiedAt = obj.optLong("modifiedAt", 0L)
                     )
                 )
             }

@@ -30,18 +30,37 @@ object SongExportManager {
                         put("description", song.description)
                         put("difficulty", song.difficulty)
                         put("available", true)
-                        put("builtIn", false)
-                        put("version", song.version)
+                        put("builtIn", song.builtIn)
+                        val hasTimestamps = song.lines.any { line -> line.notes.any { it.timestamp != null } }
+                        put("version", if (hasTimestamps) 2 else song.version)
+                        put("createdAt", song.createdAt)
+                        put("modifiedAt", song.modifiedAt)
                         
                         val linesArray = JSONArray()
+                        val timestampsArray = JSONArray()
+                        
                         song.lines.forEach { line ->
                             val notesArray = JSONArray()
+                            val lineTimestampsArray = JSONArray()
+                            var lineHasTimestamp = false
+                            
                             line.notes.forEach { noteWithOctave ->
                                 notesArray.put("${noteWithOctave.note.displayName}${noteWithOctave.octave}")
+                                val timestamp = noteWithOctave.timestamp
+                                if (timestamp != null) {
+                                    lineTimestampsArray.put(timestamp)
+                                    lineHasTimestamp = true
+                                } else {
+                                    lineTimestampsArray.put(JSONObject.NULL)
+                                }
                             }
                             linesArray.put(notesArray)
+                            timestampsArray.put(lineTimestampsArray)
                         }
                         put("lines", linesArray)
+                        if (hasTimestamps) {
+                            put("timestamps", timestampsArray)
+                        }
                     })
                 }
                 put("songs", songsArray)
