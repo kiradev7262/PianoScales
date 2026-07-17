@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pianoscales.learnmusic.ui.freestyle.FreestylePiano
 import com.pianoscales.learnmusic.ui.theme.*
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,16 +137,58 @@ fun SongComposerScreen(
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Listening to External Piano...",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = PrimaryAccent
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Listening to External Piano...",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryAccent
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                // Phase 1: Diagnostic UI
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = CardSurface.copy(alpha = 0.5f)
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            "Diagnostic Info", 
+                                            style = MaterialTheme.typography.labelSmall, 
+                                            color = PrimaryAccent,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        DiagnosticRowComposer("Note", uiState.detectedNote?.displayName ?: "--")
+                                        DiagnosticRowComposer("Octave", uiState.detectedOctave?.toString() ?: "--")
+                                        DiagnosticRowComposer("MIDI", uiState.detectedMidi?.toString() ?: "--")
+                                        DiagnosticRowComposer("Freq", "${String.format(Locale.US, "%.2f", uiState.detectedFrequency)} Hz")
+                                        DiagnosticRowComposer("Confidence", "${(uiState.confidence * 100).toInt()}%")
+                                        DiagnosticRowComposer("Timestamp", uiState.timestamp.toString())
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DiagnosticRowComposer(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = TextMuted)
+        Text(text = value, style = MaterialTheme.typography.labelSmall, color = TextPrimary, fontWeight = FontWeight.Medium)
     }
 }
 

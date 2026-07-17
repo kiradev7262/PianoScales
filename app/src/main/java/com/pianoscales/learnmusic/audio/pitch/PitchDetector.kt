@@ -6,17 +6,30 @@ import android.media.MediaRecorder
 import android.util.Log
 import be.tarsos.dsp.pitch.Yin
 import com.pianoscales.learnmusic.theory.Note
+import com.pianoscales.learnmusic.ui.songs.NoteWithOctave
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.sqrt
 
 @Singleton
 class PitchDetector @Inject constructor() {
+
+    data class DetectionResult(
+        val note: Note?,
+        val midi: Int?,
+        val octave: Int?,
+        val frequency: Float,
+        val amplitude: Float,
+        val isStable: Boolean,
+        val confidence: Float,
+        val timestamp: Long = System.currentTimeMillis()
+    )
 
     companion object {
         private const val TAG = "PitchDetector"
@@ -25,9 +38,9 @@ class PitchDetector @Inject constructor() {
         
         // UX Tuning Thresholds
         private const val MIN_AMPLITUDE_THRESHOLD = 0.005f // Filter out background noise
-        private const val MIN_PROBABILITY_THRESHOLD = 0.90f // Only confident pitches
-        private const val MIN_STABLE_FRAMES = 4 // Must be consistent for ~180ms
-        private const val NOTE_HOLD_MS = 800L // Keep note on screen after sound stops
+        private const val MIN_PROBABILITY_THRESHOLD = 0.85f // Slightly lowered from 0.90 for better responsiveness
+        private const val MIN_STABLE_FRAMES = 2 // Reduced from 4 for much faster response (~92ms)
+        private const val NOTE_HOLD_MS = 400L // Reduced from 800ms for more responsive UI
     }
 
     private val mutex = Mutex()
@@ -37,13 +50,14 @@ class PitchDetector @Inject constructor() {
     private var isRunning = false
 
     // Stability filtering state
-    private var consecutiveNote: Note? = null
+    private var consecutiveMidi: Int? = null
     private var consecutiveCount = 0
     private var lastStableNote: Note? = null
+    private var lastStableMidi: Int? = null
     private var lastStableTime = 0L
 
     suspend fun startListening(
-        onResult: (Note?, Float, Float, Boolean) -> Unit
+        onResult: (DetectionResult) -> Unit
     ) = mutex.withLock {
         withContext(Dispatchers.IO) {
             try {
@@ -102,14 +116,26 @@ class PitchDetector @Inject constructor() {
                         val probability = result.probability
                         
                         // 3. Apply Filtering Logic
-                        val filteredNote = processPitch(frequency, probability, rms)
+                        val filteredMidi = processPitch(frequency, probability, rms)
                         
                         // 4. Determine Stability for UI
-                        val isStable = filteredNote != null && 
-                                      filteredNote == lastStableNote && 
+                        val isStable = filteredMidi != null && 
+                                      filteredMidi == lastStableMidi && 
                                       consecutiveCount >= MIN_STABLE_FRAMES
+
+                        val midi = PitchToNoteMapper.frequencyToMidi(frequency)
+                        val octave = midi?.let { (it / 12) - 1 }
+                        val note = midi?.let { Note.entries.getOrNull(it % 12) }
                         
-                        onResult(filteredNote, frequency, rms, isStable)
+                        onResult(DetectionResult(
+                            note = note, // Report note even if not stable for real-time UI feedback
+                            midi = midi,
+                            octave = octave,
+                            frequency = frequency,
+                            amplitude = rms,
+                            isStable = isStable,
+                            confidence = probability
+                        ))
                     }
                 }
             } catch (e: Exception) {
@@ -136,46 +162,52 @@ class PitchDetector @Inject constructor() {
         audioRecord = null
     }
 
-    private fun processPitch(frequency: Float, probability: Float, amplitude: Float): Note? {
+    private fun processPitch(frequency: Float, probability: Float, amplitude: Float): Int? {
         val currentTime = System.currentTimeMillis()
         
         // A. Amplitude Threshold - Ignore silent/low noise frames
         if (amplitude < MIN_AMPLITUDE_THRESHOLD) {
-            return checkHold(currentTime)
+            return checkHoldMidi(currentTime)
         }
 
         // B. Confidence Filter - Ignore unpitched noise or low confidence detections
         if (probability < MIN_PROBABILITY_THRESHOLD || frequency <= 0) {
-            return checkHold(currentTime)
+            return checkHoldMidi(currentTime)
         }
 
-        val currentNote = PitchToNoteMapper.mapFrequencyToNote(frequency)
+        val currentMidi = PitchToNoteMapper.frequencyToMidi(frequency)
         
-        // C. Stability Filter - Require N consecutive frames of same note
-        if (currentNote != null && currentNote == consecutiveNote) {
+        // C. Stability Filter - Require N consecutive frames of same MIDI note (includes octave)
+        if (currentMidi != null && currentMidi == consecutiveMidi) {
             consecutiveCount++
         } else {
-            consecutiveNote = currentNote
+            consecutiveMidi = currentMidi
             consecutiveCount = 1
         }
 
-        if (consecutiveCount >= MIN_STABLE_FRAMES) {
-            lastStableNote = currentNote
+        if (consecutiveCount >= MIN_STABLE_FRAMES && currentMidi != null) {
+            if (currentMidi != lastStableMidi) {
+                val currentNote = Note.entries.getOrNull(currentMidi % 12)
+                val octave = (currentMidi / 12) - 1
+                Log.d(TAG, "Frequency=${String.format(Locale.US, "%.2f", frequency)}Hz Note=${currentNote?.displayName} Octave=$octave Midi=$currentMidi Timestamp=$currentTime")
+            }
+            lastStableMidi = currentMidi
+            lastStableNote = Note.entries.getOrNull(currentMidi % 12)
             lastStableTime = currentTime
-            return currentNote
+            return currentMidi
         }
 
         // D. Note Hold - Keep showing the last stable note briefly
-        return checkHold(currentTime)
+        return checkHoldMidi(currentTime)
     }
 
-    private fun checkHold(currentTime: Long): Note? {
-        if (lastStableNote != null && (currentTime - lastStableTime) < NOTE_HOLD_MS) {
-            return lastStableNote
+    private fun checkHoldMidi(currentTime: Long): Int? {
+        if (lastStableMidi != null && (currentTime - lastStableTime) < NOTE_HOLD_MS) {
+            return lastStableMidi
         }
         
         // If hold expired, clear everything
-        if (lastStableNote != null) {
+        if (lastStableMidi != null) {
             resetFilters()
         }
         return null
@@ -183,7 +215,8 @@ class PitchDetector @Inject constructor() {
 
     fun resetFilters() {
         consecutiveCount = 0
-        consecutiveNote = null
+        consecutiveMidi = null
+        lastStableMidi = null
         lastStableNote = null
         lastStableTime = 0L
     }

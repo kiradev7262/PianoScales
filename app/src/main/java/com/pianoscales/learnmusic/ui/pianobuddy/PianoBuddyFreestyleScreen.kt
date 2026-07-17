@@ -2,6 +2,7 @@ package com.pianoscales.learnmusic.ui.pianobuddy
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -17,6 +18,7 @@ import com.pianoscales.learnmusic.audio.pitch.PitchToNoteMapper
 import com.pianoscales.learnmusic.ui.LocalBottomBarVisibility
 import com.pianoscales.learnmusic.ui.freestyle.FreestylePiano
 import com.pianoscales.learnmusic.ui.theme.*
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,6 +148,10 @@ fun ExternalPianoContent(
     val frequency by voiceViewModel.frequency.collectAsState()
     val isStable by voiceViewModel.isStable.collectAsState()
     val isListening by voiceViewModel.isListening.collectAsState()
+    val midi by voiceViewModel.midi.collectAsState()
+    val octave by voiceViewModel.octave.collectAsState()
+    val confidence by voiceViewModel.confidence.collectAsState()
+    val timestamp by voiceViewModel.timestamp.collectAsState()
 
     DisposableEffect(Unit) {
         voiceViewModel.startListening()
@@ -190,5 +196,48 @@ fun ExternalPianoContent(
             style = MaterialTheme.typography.labelMedium,
             color = TextMuted
         )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Phase 1: Diagnostic UI
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = CardSurface.copy(alpha = 0.5f)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Diagnostic Info",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = PrimaryAccent,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                DiagnosticRow("Detected Note:", detectedNote?.displayName ?: "--")
+                DiagnosticRow("Detected Octave:", octave?.toString() ?: "--")
+                DiagnosticRow("Detected MIDI Number:", midi?.toString() ?: "--")
+                DiagnosticRow("Detected Frequency:", "${String.format("%.2f", frequency)} Hz")
+                DiagnosticRow("Detection Confidence:", "${(confidence * 100).toInt()}%")
+                DiagnosticRow("Current Timestamp:", timestamp.toString())
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiagnosticRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        Text(text = value, style = MaterialTheme.typography.bodySmall, color = TextPrimary, fontWeight = FontWeight.Medium)
     }
 }

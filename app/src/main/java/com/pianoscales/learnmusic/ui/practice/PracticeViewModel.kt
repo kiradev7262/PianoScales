@@ -37,6 +37,10 @@ data class PracticeUiState(
     val isListening: Boolean = false,
     val detectedNote: Note? = null,
     val detectedFrequency: Float = 0f,
+    val detectedMidi: Int? = null,
+    val detectedOctave: Int? = null,
+    val detectionConfidence: Float = 0f,
+    val detectionTimestamp: Long = 0L,
     val isStablePitch: Boolean = false,
     val inputVolume: Float = 0f,
     val isAudioLoaded: Boolean = false,
@@ -237,11 +241,20 @@ class PracticeViewModel @Inject constructor(
             ) 
         }
         listeningJob = viewModelScope.launch {
-            pitchDetector.startListening { note, frequency, volume, isStable ->
-                _uiState.update { it.copy(detectedFrequency = frequency, inputVolume = volume) }
-                if (isStable && note != null) {
-                    evaluateNote(note, isStable)
-                } else if (!isStable) {
+            pitchDetector.startListening { result ->
+                _uiState.update { 
+                    it.copy(
+                        detectedFrequency = result.frequency, 
+                        inputVolume = result.amplitude,
+                        detectedMidi = result.midi,
+                        detectedOctave = result.octave,
+                        detectionConfidence = result.confidence,
+                        detectionTimestamp = result.timestamp
+                    ) 
+                }
+                if (result.isStable && result.note != null) {
+                    evaluateNote(result.note, result.isStable)
+                } else if (!result.isStable) {
                     // Reset evaluation when pitch becomes unstable
                     _uiState.update { currentState ->
                         currentState.copy(

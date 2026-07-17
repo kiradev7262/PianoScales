@@ -27,6 +27,18 @@ class VoiceTrainingViewModel @Inject constructor(
     private val _isStable = MutableStateFlow(false)
     val isStable = _isStable.asStateFlow()
 
+    private val _midi = MutableStateFlow<Int?>(null)
+    val midi = _midi.asStateFlow()
+
+    private val _octave = MutableStateFlow<Int?>(null)
+    val octave = _octave.asStateFlow()
+
+    private val _confidence = MutableStateFlow(0f)
+    val confidence = _confidence.asStateFlow()
+
+    private val _timestamp = MutableStateFlow(0L)
+    val timestamp = _timestamp.asStateFlow()
+
     private val _targetNote = MutableStateFlow<Note?>(null)
     val targetNote = _targetNote.asStateFlow()
 
@@ -37,11 +49,16 @@ class VoiceTrainingViewModel @Inject constructor(
         if (_isListening.value) return
         _isListening.value = true
         viewModelScope.launch {
-            pitchDetector.startListening { note, freq, _, stable ->
-                _detectedNote.value = note
-                _frequency.value = freq
-                _isStable.value = stable
-                if (stable && note != null && note == _targetNote.value) {
+            pitchDetector.startListening { result ->
+                _detectedNote.value = result.note
+                _frequency.value = result.frequency
+                _isStable.value = result.isStable
+                _midi.value = result.midi
+                _octave.value = result.octave
+                _confidence.value = result.confidence
+                _timestamp.value = result.timestamp
+
+                if (result.isStable && result.note != null && result.note == _targetNote.value) {
                     viewModelScope.launch { profileRepository.updateStreak() }
                 }
             }

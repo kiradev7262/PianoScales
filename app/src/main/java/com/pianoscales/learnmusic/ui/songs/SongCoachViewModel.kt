@@ -22,7 +22,13 @@ data class SongCoachUiState(
     val isCompleted: Boolean = false,
     val pianoMode: PianoMode = PianoMode.VIRTUAL,
     val isListening: Boolean = false,
-    val isDemoPlaying: Boolean = false
+    val isDemoPlaying: Boolean = false,
+    val detectedNote: Note? = null,
+    val detectedOctave: Int? = null,
+    val detectedMidi: Int? = null,
+    val detectedFrequency: Float = 0f,
+    val confidence: Float = 0f,
+    val timestamp: Long = 0L
 ) {
     val currentLine: SongLine? get() = song?.lines?.getOrNull(currentLineIndex)
     val currentNote: NoteWithOctave? get() = currentLine?.notes?.getOrNull(currentNoteIndex)
@@ -78,9 +84,19 @@ class SongCoachViewModel @Inject constructor(
         _uiState.update { it.copy(isListening = true) }
         pitchDetectionJob?.cancel()
         pitchDetectionJob = viewModelScope.launch {
-            pitchDetector.startListening { _, frequency, _, isStable ->
-                if (isStable) {
-                    val detectedNoteWithOctave = PitchToNoteMapper.mapFrequencyToNoteWithOctave(frequency)
+            pitchDetector.startListening { result ->
+                _uiState.update { 
+                    it.copy(
+                        detectedNote = result.note,
+                        detectedOctave = result.octave,
+                        detectedMidi = result.midi,
+                        detectedFrequency = result.frequency,
+                        confidence = result.confidence,
+                        timestamp = result.timestamp
+                    )
+                }
+                if (result.isStable && result.note != null) {
+                    val detectedNoteWithOctave = PitchToNoteMapper.mapFrequencyToNoteWithOctave(result.frequency)
                     if (detectedNoteWithOctave != null) {
                         evaluateNote(detectedNoteWithOctave.note, detectedNoteWithOctave.octave)
                     }
