@@ -52,6 +52,7 @@ fun SongComposerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(PrimaryBackground)
+                .systemBarsPadding()
         ) {
             // Header
             ComposerHeader(
@@ -64,83 +65,185 @@ fun SongComposerScreen(
                 onFinish = { viewModel.finish(onBack) }
             )
 
-            // Current Line Display
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(if (isLandscape) 0.25f else 0.35f)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Line ${uiState.currentLineIndex + 1}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = PrimaryAccent
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Row(
+            if (isLandscape) {
+                // Landscape Layout: Side-by-side
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left Panel: Info and Controls
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.Center
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        uiState.currentLine.forEach { noteWithOctave ->
-                            Text(
-                                text = "${noteWithOctave.note.displayName}${noteWithOctave.octave}",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = TextPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                            )
-                        }
-                        if (uiState.currentLine.isEmpty()) {
-                            Text(
-                                text = "Start playing to record notes...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextMuted
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Button(
-                        onClick = { viewModel.nextLine() },
-                        colors = ButtonDefaults.buttonColors(containerColor = CardSurface, contentColor = TextPrimary),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text("Next Line")
-                    }
-                }
-            }
-
-            // Keyboard Section
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(if (isLandscape) 0.75f else 0.65f)
-                    .background(CardSurface)
-            ) {
-                Column {
-                    FreestylePiano(
-                        onNoteClick = { note, octave -> viewModel.onNotePlayed(note, octave) },
-                        height = if (isLandscape) 280.dp else 240.dp,
-                        enabled = uiState.pianoMode == PianoMode.VIRTUAL
-                    )
-                    
-                    if (uiState.pianoMode == PianoMode.EXTERNAL) {
+                        Text(
+                            text = "Line ${uiState.currentLineIndex + 1}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = PrimaryAccent
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Scrollable Notes Display
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
+                            modifier = Modifier.weight(1f, fill = false),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Listening to External Piano...",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = PrimaryAccent
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (uiState.currentLine.isEmpty()) {
+                                    Text(
+                                        text = "Play notes to record...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextMuted
+                                    )
+                                } else {
+                                    uiState.currentLine.forEach { noteWithOctave ->
+                                        Text(
+                                            text = "${noteWithOctave.note.displayName}${noteWithOctave.octave}",
+                                            style = MaterialTheme.typography.headlineSmall,
+                                            color = TextPrimary,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        Button(
+                            onClick = { viewModel.nextLine() },
+                            colors = ButtonDefaults.buttonColors(containerColor = CardSurface, contentColor = TextPrimary),
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Next Line")
+                        }
+                    }
+
+                    // Right Panel: Keyboard
+                    Box(
+                        modifier = Modifier
+                            .weight(1.8f)
+                            .fillMaxHeight()
+                            .background(
+                                color = CardSurface, 
+                                shape = RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp)
                             )
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            FreestylePiano(
+                                onNoteClick = { note, octave -> viewModel.onNotePlayed(note, octave) },
+                                height = 200.dp,
+                                enabled = uiState.pianoMode == PianoMode.VIRTUAL
+                            )
+                            
+                            if (uiState.pianoMode == PianoMode.EXTERNAL) {
+                                Text(
+                                    text = "Listening to External Piano...",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryAccent,
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Portrait Layout: Stacked
+                // Current Line Display
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.35f)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Line ${uiState.currentLineIndex + 1}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = PrimaryAccent
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (uiState.currentLine.isEmpty()) {
+                                Text(
+                                    text = "Start playing to record notes...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextMuted
+                                )
+                            } else {
+                                uiState.currentLine.forEach { noteWithOctave ->
+                                    Text(
+                                        text = "${noteWithOctave.note.displayName}${noteWithOctave.octave}",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = TextPrimary,
+                                        modifier = Modifier.padding(horizontal = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        Button(
+                            onClick = { viewModel.nextLine() },
+                            colors = ButtonDefaults.buttonColors(containerColor = CardSurface, contentColor = TextPrimary),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text("Next Line")
+                        }
+                    }
+                }
+
+                // Keyboard Section
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.65f)
+                        .background(CardSurface)
+                ) {
+                    Column {
+                        FreestylePiano(
+                            onNoteClick = { note, octave -> viewModel.onNotePlayed(note, octave) },
+                            height = 240.dp,
+                            enabled = uiState.pianoMode == PianoMode.VIRTUAL
+                        )
+                        
+                        if (uiState.pianoMode == PianoMode.EXTERNAL) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Listening to External Piano...",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = PrimaryAccent
+                                )
+                            }
                         }
                     }
                 }
@@ -326,11 +429,13 @@ fun ComposerHeader(
     onUndo: () -> Unit,
     onFinish: () -> Unit
 ) {
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp)
-            .statusBarsPadding(),
+            .padding(horizontal = 8.dp, vertical = if (isLandscape) 4.dp else 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
