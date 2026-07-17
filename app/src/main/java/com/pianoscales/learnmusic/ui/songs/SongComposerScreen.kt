@@ -12,8 +12,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pianoscales.learnmusic.ui.components.InfoCard
 import com.pianoscales.learnmusic.ui.freestyle.FreestylePiano
 import com.pianoscales.learnmusic.ui.theme.*
 
@@ -62,7 +67,9 @@ fun SongComposerScreen(
                     if (uiState.isEditMode) onBack() 
                     else viewModel.updateTitle(uiState.title) 
                 },
-                onUndo = { viewModel.undo() },
+                onDeleteLastNote = { viewModel.deleteLastNote() },
+                onClearLine = { viewModel.clearLine() },
+                onDeleteLine = { viewModel.deleteLine() },
                 onFinish = { viewModel.finish(onBack) }
             )
 
@@ -81,10 +88,10 @@ fun SongComposerScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
-                            text = "Line ${uiState.currentLineIndex + 1}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = PrimaryAccent
+                        LineSelector(
+                            currentLineIndex = uiState.currentLineIndex,
+                            lineCount = uiState.lines.size,
+                            onLineSelected = { viewModel.setCurrentLineIndex(it) }
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         
@@ -132,12 +139,14 @@ fun SongComposerScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Button(
-                            onClick = { viewModel.nextLine() },
+                            onClick = { viewModel.addLine() },
                             colors = ButtonDefaults.buttonColors(containerColor = CardSurface, contentColor = TextPrimary),
                             shape = MaterialTheme.shapes.medium,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Next Line")
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Add New Line")
                         }
                     }
 
@@ -185,10 +194,10 @@ fun SongComposerScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Line ${uiState.currentLineIndex + 1}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = PrimaryAccent
+                        LineSelector(
+                            currentLineIndex = uiState.currentLineIndex,
+                            lineCount = uiState.lines.size,
+                            onLineSelected = { viewModel.setCurrentLineIndex(it) }
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         
@@ -227,11 +236,13 @@ fun SongComposerScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         
                         Button(
-                            onClick = { viewModel.nextLine() },
+                            onClick = { viewModel.addLine() },
                             colors = ButtonDefaults.buttonColors(containerColor = CardSurface, contentColor = TextPrimary),
                             shape = MaterialTheme.shapes.medium
                         ) {
-                            Text("Next Line")
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Add New Line")
                         }
                     }
                 }
@@ -249,6 +260,19 @@ fun SongComposerScreen(
                             height = 240.dp,
                             enabled = uiState.pianoMode == PianoMode.VIRTUAL
                         )
+
+                        if (!isLandscape) {
+                            Box(modifier = Modifier.padding(16.dp)) {
+                                InfoCard(
+                                    title = if (uiState.pianoMode == PianoMode.VIRTUAL) "Tip" else "External Mode Active",
+                                    description = if (uiState.pianoMode == PianoMode.VIRTUAL) {
+                                        "Rotate your device to landscape mode for a wider keyboard and the best playing experience."
+                                    } else {
+                                        "Play the notes on your real piano. Piano Scales is listening..."
+                                    }
+                                )
+                            }
+                        }
                         
                         if (uiState.pianoMode == PianoMode.EXTERNAL) {
                             Box(
@@ -469,10 +493,69 @@ fun SubtleScrollIndicator(
 }
 
 @Composable
+fun LineSelector(
+    currentLineIndex: Int,
+    lineCount: Int,
+    onLineSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .clickable { expanded = true }
+                .padding(vertical = 4.dp, horizontal = 12.dp)
+                .background(CardSurface, RoundedCornerShape(8.dp))
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Editing Line ${currentLineIndex + 1}",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryAccent,
+                fontWeight = FontWeight.Bold
+            )
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "Select Line",
+                tint = PrimaryAccent
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(CardSurface)
+        ) {
+            for (i in 0 until lineCount) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = "Line ${i + 1}",
+                            color = if (i == currentLineIndex) PrimaryAccent else TextPrimary
+                        )
+                    },
+                    onClick = {
+                        onLineSelected(i)
+                        expanded = false
+                    },
+                    trailingIcon = if (i == currentLineIndex) {
+                        { Icon(Icons.Default.Check, contentDescription = null, tint = PrimaryAccent) }
+                    } else null
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ComposerHeader(
     title: String,
     onBack: () -> Unit,
-    onUndo: () -> Unit,
+    onDeleteLastNote: () -> Unit,
+    onClearLine: () -> Unit,
+    onDeleteLine: () -> Unit,
     onFinish: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
@@ -485,23 +568,42 @@ fun ComposerHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
             }
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
         
-        Row {
-            IconButton(onClick = onUndo) {
-                Icon(Icons.Default.Refresh, contentDescription = "Undo", tint = TextMuted)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onDeleteLastNote) {
+                Icon(Icons.AutoMirrored.Filled.Backspace, contentDescription = "Delete Last Note", tint = TextMuted)
             }
+            IconButton(onClick = onClearLine) {
+                Icon(Icons.Default.Delete, contentDescription = "Clear Line", tint = TextMuted)
+            }
+            IconButton(onClick = onDeleteLine) {
+                Icon(Icons.Default.DeleteForever, contentDescription = "Delete Line", tint = ErrorAccent)
+            }
+            
+            VerticalDivider(
+                modifier = Modifier
+                    .height(24.dp)
+                    .padding(horizontal = 4.dp),
+                color = TextMuted.copy(alpha = 0.2f)
+            )
+
             TextButton(
                 onClick = onFinish,
                 colors = ButtonDefaults.textButtonColors(contentColor = PrimaryAccent)

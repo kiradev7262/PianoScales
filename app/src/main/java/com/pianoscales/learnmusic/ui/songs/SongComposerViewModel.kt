@@ -94,26 +94,62 @@ class SongComposerViewModel @Inject constructor(
         }
     }
 
-    fun undo() {
+    fun deleteLastNote() {
         _uiState.update { state ->
             val newLines = state.lines.toMutableList()
             val currentLine = newLines[state.currentLineIndex].toMutableList()
             if (currentLine.isNotEmpty()) {
                 currentLine.removeAt(currentLine.size - 1)
                 newLines[state.currentLineIndex] = currentLine
-            } else if (state.currentLineIndex > 0) {
-                newLines.removeAt(state.currentLineIndex)
-                return@update state.copy(lines = newLines, currentLineIndex = state.currentLineIndex - 1)
+                state.copy(lines = newLines)
+            } else {
+                state
             }
+        }
+    }
+
+    fun clearLine() {
+        _uiState.update { state ->
+            val newLines = state.lines.toMutableList()
+            newLines[state.currentLineIndex] = emptyList()
             state.copy(lines = newLines)
         }
     }
 
-    fun nextLine() {
+    fun deleteLine() {
+        _uiState.update { state ->
+            val newLines = state.lines.toMutableList()
+            if (newLines.size > 1) {
+                newLines.removeAt(state.currentLineIndex)
+                val newIndex = if (state.currentLineIndex >= newLines.size) {
+                    newLines.size - 1
+                } else {
+                    state.currentLineIndex
+                }
+                state.copy(lines = newLines, currentLineIndex = newIndex)
+            } else {
+                // If it's the only line, just clear it
+                newLines[0] = emptyList()
+                state.copy(lines = newLines, currentLineIndex = 0)
+            }
+        }
+    }
+
+    fun setCurrentLineIndex(index: Int) {
+        if (index in _uiState.value.lines.indices) {
+            _uiState.update { it.copy(currentLineIndex = index) }
+        }
+    }
+
+    fun undo() {
+        deleteLastNote()
+    }
+
+    fun addLine() {
         _uiState.update { state ->
             val newLines = state.lines.toMutableList()
             newLines.add(emptyList())
-            state.copy(lines = newLines, currentLineIndex = state.currentLineIndex + 1)
+            state.copy(lines = newLines, currentLineIndex = newLines.size - 1)
         }
     }
 
