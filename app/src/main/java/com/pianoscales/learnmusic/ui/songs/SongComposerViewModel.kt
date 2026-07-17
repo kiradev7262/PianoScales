@@ -40,6 +40,7 @@ class SongComposerViewModel @Inject constructor(
     val uiState: StateFlow<SongComposerUiState> = _uiState.asStateFlow()
 
     private var pitchDetectionJob: kotlinx.coroutines.Job? = null
+    private var recordingStartTime: Long = 0L
 
     init {
         val songId: String? = savedStateHandle["songId"]
@@ -73,6 +74,7 @@ class SongComposerViewModel @Inject constructor(
     fun startComposer() {
         if (_uiState.value.title.isBlank()) return
         _uiState.update { it.copy(showTitleInput = false) }
+        recordingStartTime = System.currentTimeMillis()
         if (_uiState.value.pianoMode == PianoMode.EXTERNAL) {
             startListening()
         }
@@ -85,10 +87,11 @@ class SongComposerViewModel @Inject constructor(
     }
 
     private fun recordNote(note: Note, octave: Int) {
+        val timestamp = System.currentTimeMillis() - recordingStartTime
         _uiState.update { state ->
             val newLines = state.lines.toMutableList()
             val currentLine = newLines[state.currentLineIndex].toMutableList()
-            currentLine.add(NoteWithOctave(note, octave))
+            currentLine.add(NoteWithOctave(note, octave, timestamp))
             newLines[state.currentLineIndex] = currentLine
             state.copy(lines = newLines)
         }

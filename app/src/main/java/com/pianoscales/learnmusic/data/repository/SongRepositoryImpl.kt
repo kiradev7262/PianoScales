@@ -79,7 +79,15 @@ class SongRepositoryImpl @Inject constructor(
             lines.forEach { line ->
                 put(JSONArray().apply {
                     line.notes.forEach { noteWithOctave ->
-                        put("${noteWithOctave.note.name}${noteWithOctave.octave}")
+                        val noteStr = "${noteWithOctave.note.name}${noteWithOctave.octave}"
+                        if (noteWithOctave.timestamp != null) {
+                            put(org.json.JSONObject().apply {
+                                put("n", noteStr)
+                                put("t", noteWithOctave.timestamp)
+                            })
+                        } else {
+                            put(noteStr)
+                        }
                     }
                 })
             }
@@ -105,8 +113,15 @@ class SongRepositoryImpl @Inject constructor(
                 val notesArray = linesArray.getJSONArray(i)
                 val notes = mutableListOf<NoteWithOctave>()
                 for (j in 0 until notesArray.length()) {
-                    val noteStr = notesArray.getString(j)
-                    parseNote(noteStr)?.let { notes.add(it) }
+                    val noteEntry = notesArray.get(j)
+                    if (noteEntry is org.json.JSONObject) {
+                        val noteStr = noteEntry.getString("n")
+                        val timestamp = noteEntry.getLong("t")
+                        parseNote(noteStr)?.let { notes.add(it.copy(timestamp = timestamp)) }
+                    } else {
+                        val noteStr = notesArray.getString(j)
+                        parseNote(noteStr)?.let { notes.add(it) }
+                    }
                 }
                 songLines.add(SongLine(notes))
             }
@@ -193,8 +208,15 @@ class SongRepositoryImpl @Inject constructor(
                     val notesArray = linesArray.getJSONArray(j)
                     val notes = mutableListOf<NoteWithOctave>()
                     for (k in 0 until notesArray.length()) {
-                        val noteStr = notesArray.getString(k)
-                        parseNote(noteStr)?.let { notes.add(it) }
+                        val noteEntry = notesArray.get(k)
+                        if (noteEntry is org.json.JSONObject) {
+                            val noteStr = noteEntry.getString("n")
+                            val timestamp = noteEntry.getLong("t")
+                            parseNote(noteStr)?.let { notes.add(it.copy(timestamp = timestamp)) }
+                        } else {
+                            val noteStr = notesArray.getString(k)
+                            parseNote(noteStr)?.let { notes.add(it) }
+                        }
                     }
                     songLines.add(SongLine(notes))
                 }
