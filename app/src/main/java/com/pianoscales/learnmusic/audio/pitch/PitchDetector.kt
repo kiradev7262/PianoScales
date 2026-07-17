@@ -6,7 +6,6 @@ import android.media.MediaRecorder
 import android.util.Log
 import be.tarsos.dsp.pitch.Yin
 import com.pianoscales.learnmusic.theory.Note
-import com.pianoscales.learnmusic.ui.songs.NoteWithOctave
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
@@ -38,9 +37,11 @@ class PitchDetector @Inject constructor() {
         
         // UX Tuning Thresholds
         private const val MIN_AMPLITUDE_THRESHOLD = 0.005f // Filter out background noise
-        private const val MIN_PROBABILITY_THRESHOLD = 0.85f // Slightly lowered from 0.90 for better responsiveness
-        private const val MIN_STABLE_FRAMES = 2 // Reduced from 4 for much faster response (~92ms)
-        private const val NOTE_HOLD_MS = 400L // Reduced from 800ms for more responsive UI
+        private const val MIN_PROBABILITY_THRESHOLD = 0.88f // Increased from 0.85 for better stability
+        private const val MIN_STABLE_FRAMES = 2 // Consecutive frames required after median filtering
+        private const val NOTE_HOLD_MS = 400L // Keep note on screen after sound stops
+        private const val OCTAVE_STABILITY_MS = 100L // Validation window for octave jumps
+        private const val MEDIAN_WINDOW_SIZE = 5 // Window for frequency median filtering
     }
 
     private val mutex = Mutex()
@@ -55,6 +56,13 @@ class PitchDetector @Inject constructor() {
     private var lastStableNote: Note? = null
     private var lastStableMidi: Int? = null
     private var lastStableTime = 0L
+
+    // Octave stabilization state
+    private var candidateMidi: Int? = null
+    private var candidateStartTime = 0L
+
+    // Median filter state
+    private val frequencyWindow = mutableListOf<Float>()
 
     suspend fun startListening(
         onResult: (DetectionResult) -> Unit
@@ -165,40 +173,139 @@ class PitchDetector @Inject constructor() {
     private fun processPitch(frequency: Float, probability: Float, amplitude: Float): Int? {
         val currentTime = System.currentTimeMillis()
         
-        // A. Amplitude Threshold - Ignore silent/low noise frames
+        // Phase 1: Comprehensive Debug Logging (Raw Input)
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            val rawMidi = PitchToNoteMapper.frequencyToMidi(frequency)
+            val rawNote = rawMidi?.let { Note.entries[(it % 12 + 12) % 12] }
+            val rawOctave = rawMidi?.let { (it / 12) - 1 }
+            Log.d(TAG, """
+                Pitch Debug (Raw)
+                Frequency : ${String.format(Locale.US, "%.2f", frequency)} Hz
+                Confidence : ${String.format(Locale.US, "%.2f", probability)}
+                Amplitude : ${String.format(Locale.US, "%.4f", amplitude)}
+                Midi : ${rawMidi ?: "--"}
+                Note : ${rawNote?.displayName ?: "--"}${rawOctave ?: ""}
+                Time : $currentTime
+            """.trimIndent())
+        }
+
+        // A. Amplitude Gate
         if (amplitude < MIN_AMPLITUDE_THRESHOLD) {
+            logRejection("Low amplitude", frequency, probability, amplitude)
+            cancelCandidate("Silence detected")
             return checkHoldMidi(currentTime)
         }
 
-        // B. Confidence Filter - Ignore unpitched noise or low confidence detections
+        // B. Confidence Filter
         if (probability < MIN_PROBABILITY_THRESHOLD || frequency <= 0) {
+            logRejection(if (frequency <= 0) "Invalid frequency" else "Low confidence", frequency, probability, amplitude)
+            cancelCandidate("Unstable pitch detection")
             return checkHoldMidi(currentTime)
         }
 
-        val currentMidi = PitchToNoteMapper.frequencyToMidi(frequency)
+        // Phase 3.1: Median Filter on Frequency
+        frequencyWindow.add(frequency)
+        if (frequencyWindow.size > MEDIAN_WINDOW_SIZE) {
+            frequencyWindow.removeAt(0)
+        }
+        
+        val sortedFrequencies = frequencyWindow.sorted()
+        val medianFrequency = if (sortedFrequencies.isNotEmpty()) {
+            sortedFrequencies[sortedFrequencies.size / 2]
+        } else frequency
+
+        val currentMidi = PitchToNoteMapper.frequencyToMidi(medianFrequency) ?: run {
+            logRejection("MIDI conversion failed", medianFrequency, probability, amplitude)
+            cancelCandidate("Invalid MIDI")
+            return checkHoldMidi(currentTime)
+        }
         
         // C. Stability Filter - Require N consecutive frames of same MIDI note (includes octave)
-        if (currentMidi != null && currentMidi == consecutiveMidi) {
+        if (currentMidi == consecutiveMidi) {
             consecutiveCount++
         } else {
             consecutiveMidi = currentMidi
             consecutiveCount = 1
         }
 
-        if (consecutiveCount >= MIN_STABLE_FRAMES && currentMidi != null) {
-            if (currentMidi != lastStableMidi) {
-                val currentNote = Note.entries.getOrNull(currentMidi % 12)
-                val octave = (currentMidi / 12) - 1
-                Log.d(TAG, "Frequency=${String.format(Locale.US, "%.2f", frequency)}Hz Note=${currentNote?.displayName} Octave=$octave Midi=$currentMidi Timestamp=$currentTime")
+        if (consecutiveCount >= MIN_STABLE_FRAMES) {
+            // Logic for Octave Stabilization
+            
+            // 1. Initial detection or returning from silence
+            if (lastStableMidi == null) {
+                updateAcceptedNote(currentMidi, medianFrequency, currentTime)
+                return currentMidi
             }
-            lastStableMidi = currentMidi
-            lastStableNote = Note.entries.getOrNull(currentMidi % 12)
-            lastStableTime = currentTime
-            return currentMidi
+
+            // 2. Different note class (e.g. C4 -> D4) - Accept immediately
+            if (currentMidi % 12 != lastStableMidi!! % 12) {
+                cancelCandidate("Different note class detected")
+                updateAcceptedNote(currentMidi, medianFrequency, currentTime)
+                return currentMidi
+            }
+
+            // 3. Same note class (e.g. C4 -> C3) - Start or continue octave validation
+            if (currentMidi != lastStableMidi) {
+                if (candidateMidi == currentMidi) {
+                    // Candidate persists, check if enough time has passed
+                    if (currentTime - candidateStartTime >= OCTAVE_STABILITY_MS) {
+                        Log.d(TAG, "Candidate accepted after ${currentTime - candidateStartTime} ms")
+                        updateAcceptedNote(currentMidi, medianFrequency, currentTime)
+                        candidateMidi = null
+                        return currentMidi
+                    }
+                } else {
+                    // New octave candidate
+                    candidateMidi = currentMidi
+                    candidateStartTime = currentTime
+                    Log.d(TAG, "Accepted Note: ${lastStableNote?.displayName}${(lastStableMidi!! / 12) - 1}")
+                    Log.d(TAG, "Candidate Octave: ${Note.entries[(currentMidi % 12 + 12) % 12].displayName}${(currentMidi / 12) - 1}")
+                }
+                // Phase 3.4: Preserve Last Stable Note while candidate is being validated
+                return lastStableMidi
+            } else {
+                // It matches the last stable MIDI exactly
+                if (candidateMidi != null) {
+                    cancelCandidate("Returned to original octave")
+                }
+                lastStableTime = currentTime
+                return lastStableMidi
+            }
         }
 
         // D. Note Hold - Keep showing the last stable note briefly
         return checkHoldMidi(currentTime)
+    }
+
+    private fun logRejection(reason: String, frequency: Float, confidence: Float, amplitude: Float) {
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+            Log.d(TAG, """
+                Rejected sample
+                Reason: $reason
+                Frequency: ${String.format(Locale.US, "%.2f", frequency)} Hz
+                Confidence: ${String.format(Locale.US, "%.2f", confidence)}
+                Amplitude: ${String.format(Locale.US, "%.4f", amplitude)}
+            """.trimIndent())
+        }
+    }
+
+    private fun updateAcceptedNote(midi: Int, frequency: Float, currentTime: Long) {
+        if (midi != lastStableMidi) {
+            val currentNote = Note.entries[(midi % 12 + 12) % 12]
+            val octave = (midi / 12) - 1
+            Log.d(TAG, "Frequency=${String.format(Locale.US, "%.2f", frequency)}Hz Note=${currentNote.displayName} Octave=$octave Midi=$midi Timestamp=$currentTime")
+        }
+        lastStableMidi = midi
+        lastStableNote = Note.entries[(midi % 12 + 12) % 12]
+        lastStableTime = currentTime
+    }
+
+    private fun cancelCandidate(reason: String) {
+        if (candidateMidi != null) {
+            Log.d(TAG, "Candidate rejected ($reason)")
+            candidateMidi = null
+            candidateStartTime = 0L
+        }
     }
 
     private fun checkHoldMidi(currentTime: Long): Int? {
@@ -219,6 +326,9 @@ class PitchDetector @Inject constructor() {
         lastStableMidi = null
         lastStableNote = null
         lastStableTime = 0L
+        candidateMidi = null
+        candidateStartTime = 0L
+        frequencyWindow.clear()
     }
 
     fun stopListening() {
