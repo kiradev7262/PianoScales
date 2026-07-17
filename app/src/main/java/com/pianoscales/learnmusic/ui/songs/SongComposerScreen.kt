@@ -2,6 +2,7 @@ package com.pianoscales.learnmusic.ui.songs
 
 import android.content.res.Configuration
 import android.widget.Toast
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -92,29 +93,39 @@ fun SongComposerScreen(
                             modifier = Modifier.weight(1f, fill = false),
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (uiState.currentLine.isEmpty()) {
-                                    Text(
-                                        text = "Play notes to record...",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextMuted
-                                    )
-                                } else {
-                                    uiState.currentLine.forEach { noteWithOctave ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                val scrollState = rememberScrollState()
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(scrollState),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (uiState.currentLine.isEmpty()) {
                                         Text(
-                                            text = "${noteWithOctave.note.displayName}${noteWithOctave.octave}",
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            color = TextPrimary,
-                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                            text = "Play notes to record...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextMuted
                                         )
+                                    } else {
+                                        uiState.currentLine.forEach { noteWithOctave ->
+                                            Text(
+                                                text = "${noteWithOctave.note.displayName}${noteWithOctave.octave}",
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                color = TextPrimary,
+                                                modifier = Modifier.padding(horizontal = 8.dp)
+                                            )
+                                        }
                                     }
                                 }
+                                
+                                SubtleScrollIndicator(
+                                    scrollState = scrollState,
+                                    modifier = Modifier
+                                        .padding(top = 8.dp)
+                                        .width(100.dp)
+                                )
                             }
                         }
 
@@ -181,10 +192,11 @@ fun SongComposerScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         
+                        val scrollState = rememberScrollState()
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
+                                .horizontalScroll(scrollState),
                             horizontalArrangement = Arrangement.Center
                         ) {
                             if (uiState.currentLine.isEmpty()) {
@@ -204,6 +216,13 @@ fun SongComposerScreen(
                                 }
                             }
                         }
+
+                        SubtleScrollIndicator(
+                            scrollState = scrollState,
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .width(120.dp)
+                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
                         
@@ -418,6 +437,33 @@ fun InputModeOption(
                     color = if (enabled) TextSecondary else TextMuted
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun SubtleScrollIndicator(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier
+) {
+    if (scrollState.maxValue > 0) {
+        BoxWithConstraints(
+            modifier = modifier
+                .height(2.dp)
+                .background(TextMuted.copy(alpha = 0.1f), RoundedCornerShape(1.dp))
+        ) {
+            val trackWidth = maxWidth
+            val thumbWidth = trackWidth * 0.3f
+            val scrollFraction = scrollState.value.toFloat() / scrollState.maxValue
+            val xOffset = (trackWidth - thumbWidth) * scrollFraction
+            
+            Box(
+                modifier = Modifier
+                    .offset(x = xOffset)
+                    .width(thumbWidth)
+                    .fillMaxHeight()
+                    .background(PrimaryAccent.copy(alpha = 0.5f), RoundedCornerShape(1.dp))
+            )
         }
     }
 }
