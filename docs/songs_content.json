@@ -568,6 +568,76 @@
                 "D4"
             ]
         ]
+    },
+    {
+        "songId": "7ef17215-9541-4530-9f68-05c85c9cbc53",
+        "title": "clap ur hands ",
+        "description": "Custom song created on 18 Jul 2026",
+        "difficulty": "Custom",
+        "available": true,
+        "builtIn": false,
+        "version": 2,
+        "createdAt": 1784356958141,
+        "modifiedAt": 1784356958141,
+        "lines": [
+            [
+                "G4",
+                "G4",
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "B4",
+                "C5",
+                "D5"
+            ],
+            [
+                "G4",
+                "G4",
+                "D5",
+                "D5",
+                "D5",
+                "D5",
+                "D5",
+                "D5",
+                "C5",
+                "D5",
+                "E5"
+            ],
+            [
+                "E5",
+                "E5",
+                "F5",
+                "F5",
+                "F5",
+                "F5",
+                "A4",
+                "A4",
+                "F5",
+                "F5",
+                "E5",
+                "E5",
+                "E5",
+                "D5",
+                "C5",
+                "C5"
+            ],
+            [
+                "E5",
+                "E5",
+                "D5",
+                "D5",
+                "D5",
+                "C5",
+                "B4",
+                "B4",
+                "A4",
+                "B4",
+                "C5"
+            ]
+        ]
     }
 
 
