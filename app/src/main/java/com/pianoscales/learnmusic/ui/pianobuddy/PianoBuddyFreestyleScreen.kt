@@ -164,8 +164,10 @@ fun ExternalPianoContent(
         if (isStable) {
             val noteWithOctave = PitchToNoteMapper.mapFrequencyToNoteWithOctave(frequency)
             if (noteWithOctave != null) {
-                viewModel.onNotePlayed(noteWithOctave.note, noteWithOctave.octave)
+                viewModel.onNotePlayed(noteWithOctave.note, noteWithOctave.octave, frequency)
             }
+        } else {
+            viewModel.onSilence()
         }
     }
 

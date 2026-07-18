@@ -4,6 +4,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.util.Log
+import com.pianoscales.learnmusic.BuildConfig
 import be.tarsos.dsp.pitch.Yin
 import com.pianoscales.learnmusic.theory.Note
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +43,10 @@ class PitchDetector @Inject constructor() {
         private const val NOTE_HOLD_MS = 400L // Keep note on screen after sound stops
         private const val OCTAVE_STABILITY_MS = 100L // Validation window for octave jumps
         private const val MEDIAN_WINDOW_SIZE = 5 // Window for frequency median filtering
+        
+        // Harmonic Stabilization
+        private const val HARMONIC_STABILITY_MS = 250L // Persistence required for octave jumps
+        private const val HARMONIC_TOLERANCE = 0.05f // ±5% acceptance window for harmonics
     }
 
     private val mutex = Mutex()
@@ -60,6 +65,11 @@ class PitchDetector @Inject constructor() {
     // Octave stabilization state
     private var candidateMidi: Int? = null
     private var candidateStartTime = 0L
+
+    // Harmonic stabilization state
+    private var lastStableFrequency: Float? = null
+    private var frequencyCandidate: Float? = null
+    private var frequencyCandidateStartTime = 0L
 
     // Median filter state
     private val frequencyWindow = mutableListOf<Float>()
@@ -214,8 +224,11 @@ class PitchDetector @Inject constructor() {
             sortedFrequencies[sortedFrequencies.size / 2]
         } else frequency
 
-        val currentMidi = PitchToNoteMapper.frequencyToMidi(medianFrequency) ?: run {
-            logRejection("MIDI conversion failed", medianFrequency, probability, amplitude)
+        // Phase 3.2: Harmonic Stabilizer (Frequency-level stabilization before MIDI conversion)
+        val stabilizedFrequency = stabilizeHarmonics(medianFrequency, currentTime)
+
+        val currentMidi = PitchToNoteMapper.frequencyToMidi(stabilizedFrequency) ?: run {
+            logRejection("MIDI conversion failed", stabilizedFrequency, probability, amplitude)
             cancelCandidate("Invalid MIDI")
             return checkHoldMidi(currentTime)
         }
@@ -233,14 +246,14 @@ class PitchDetector @Inject constructor() {
             
             // 1. Initial detection or returning from silence
             if (lastStableMidi == null) {
-                updateAcceptedNote(currentMidi, medianFrequency, currentTime)
+                updateAcceptedNote(currentMidi, stabilizedFrequency, currentTime)
                 return currentMidi
             }
 
             // 2. Different note class (e.g. C4 -> D4) - Accept immediately
             if (currentMidi % 12 != lastStableMidi!! % 12) {
                 cancelCandidate("Different note class detected")
-                updateAcceptedNote(currentMidi, medianFrequency, currentTime)
+                updateAcceptedNote(currentMidi, stabilizedFrequency, currentTime)
                 return currentMidi
             }
 
@@ -250,7 +263,7 @@ class PitchDetector @Inject constructor() {
                     // Candidate persists, check if enough time has passed
                     if (currentTime - candidateStartTime >= OCTAVE_STABILITY_MS) {
                         Log.d(TAG, "Candidate accepted after ${currentTime - candidateStartTime} ms")
-                        updateAcceptedNote(currentMidi, medianFrequency, currentTime)
+                        updateAcceptedNote(currentMidi, stabilizedFrequency, currentTime)
                         candidateMidi = null
                         return currentMidi
                     }
@@ -269,6 +282,7 @@ class PitchDetector @Inject constructor() {
                     cancelCandidate("Returned to original octave")
                 }
                 lastStableTime = currentTime
+                lastStableFrequency = stabilizedFrequency
                 return lastStableMidi
             }
         }
@@ -298,6 +312,7 @@ class PitchDetector @Inject constructor() {
         lastStableMidi = midi
         lastStableNote = Note.entries[(midi % 12 + 12) % 12]
         lastStableTime = currentTime
+        lastStableFrequency = frequency
     }
 
     private fun cancelCandidate(reason: String) {
@@ -326,8 +341,11 @@ class PitchDetector @Inject constructor() {
         lastStableMidi = null
         lastStableNote = null
         lastStableTime = 0L
+        lastStableFrequency = null
         candidateMidi = null
         candidateStartTime = 0L
+        frequencyCandidate = null
+        frequencyCandidateStartTime = 0L
         frequencyWindow.clear()
     }
 
@@ -339,5 +357,89 @@ class PitchDetector @Inject constructor() {
         } catch (e: Exception) {
             Log.w(TAG, "Error calling stop on AudioRecord: ${e.message}")
         }
+    }
+
+    private fun stabilizeHarmonics(frequency: Float, currentTime: Long): Float {
+        val stable = lastStableFrequency ?: return frequency
+
+        // 1. Generate Candidates (Octave harmonics/subharmonics)
+        val candidateMap = mapOf(
+            "× 1" to frequency,
+            "× 2" to frequency * 2.0f,
+            "÷ 2" to frequency / 2.0f,
+            "× 4" to frequency * 4.0f,
+            "÷ 4" to frequency / 4.0f
+        )
+
+        var bestMultiplier: String? = null
+        var matchedFrequency = 0f
+
+        for ((multiplier, candidate) in candidateMap) {
+            val ratio = candidate / stable
+            if (ratio > 1.0f - HARMONIC_TOLERANCE && ratio < 1.0f + HARMONIC_TOLERANCE) {
+                bestMultiplier = multiplier
+                matchedFrequency = candidate
+                break
+            }
+        }
+
+        if (bestMultiplier != null) {
+            // Case 2: Potential harmonic flicker. Check for persistence.
+            if (frequencyCandidate == null || !isHarmonicOf(frequency, frequencyCandidate!!)) {
+                // New harmonic candidate detected
+                frequencyCandidate = frequency
+                frequencyCandidateStartTime = currentTime
+                
+                logHarmonicMatch(frequency, stable, matchedFrequency, bestMultiplier, true, stable)
+                return stable
+            } else {
+                // Existing harmonic candidate persists
+                if (currentTime - frequencyCandidateStartTime >= HARMONIC_STABILITY_MS) {
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "Persistent harmonic change accepted: $frequency Hz")
+                    }
+                    return frequency
+                } else {
+                    return stable
+                }
+            }
+        } else {
+            // Case 1: Not a harmonic relationship. Accept new frequency immediately.
+            if (frequencyCandidate != null || (BuildConfig.DEBUG && Math.abs(frequency - stable) > 5.0f)) {
+                logHarmonicMatch(frequency, stable, frequency, "N/A", false, frequency)
+            }
+            frequencyCandidate = null
+            frequencyCandidateStartTime = 0L
+            return frequency
+        }
+    }
+
+    private fun isHarmonicOf(f1: Float, f2: Float): Boolean {
+        if (f1 <= 0 || f2 <= 0) return false
+        val candidates = listOf(f1, f1 * 2f, f1 / 2f, f1 * 4f, f1 / 4f)
+        for (c in candidates) {
+            val ratio = c / f2
+            if (ratio > 1.0f - HARMONIC_TOLERANCE && ratio < 1.0f + HARMONIC_TOLERANCE) return true
+        }
+        return false
+    }
+
+    private fun logHarmonicMatch(raw: Float, stable: Float, candidate: Float, mult: String, matched: Boolean, result: Float) {
+        if (!BuildConfig.DEBUG) return
+        Log.d(TAG, """
+            ========== Harmonic Stabilizer ==========
+            Raw Frequency      : ${String.format(Locale.US, "%.1f", raw)} Hz
+            Stable Frequency   : ${String.format(Locale.US, "%.1f", stable)} Hz
+            
+            Candidate:
+            ${if (mult == "N/A") "No harmonic relationship found." else "${String.format(Locale.US, "%.1f", raw)} $mult = ${String.format(Locale.US, "%.1f", candidate)} Hz"}
+            
+            Matched Stable:
+            ${if (matched) "YES" else "NO"}
+            
+            Using:
+            ${String.format(Locale.US, "%.1f", result)} Hz
+            =========================================
+        """.trimIndent())
     }
 }

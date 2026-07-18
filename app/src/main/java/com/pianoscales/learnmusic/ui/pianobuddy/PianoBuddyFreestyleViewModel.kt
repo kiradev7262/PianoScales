@@ -24,7 +24,16 @@ class PianoBuddyFreestyleViewModel @Inject constructor(
         _inputMode.value = mode
     }
 
-    fun onNotePlayed(note: Note, octave: Int) {
-        noteEventDispatcher.dispatchNote(note, octave)
+    fun onNotePlayed(note: Note, octave: Int, frequency: Float = 0f) {
+        if (inputMode.value == FreestyleInputMode.VIRTUAL_PIANO) {
+            // For virtual piano, we want to allow repeated taps of the same note.
+            // Reset the last sent MIDI state before sending the new note.
+            noteEventDispatcher.dispatchSilence()
+        }
+        noteEventDispatcher.dispatchNote(note, octave, frequency)
+    }
+
+    fun onSilence() {
+        noteEventDispatcher.dispatchSilence()
     }
 }

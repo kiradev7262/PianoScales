@@ -111,15 +111,15 @@ class PracticeViewModel @Inject constructor(
         return -1
     }
 
-    private fun sendMidiNoteToPianoBuddy(midiNote: Int) {
-        if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED && midiNote != -1) {
-            pianoBuddyManager.sendMidiNote(midiNote)
+    private fun sendMidiNoteToPianoBuddy(midiNote: Int, frequency: Float = 0f) {
+        if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED) {
+            pianoBuddyManager.sendMidiNote(midiNote, frequency)
         }
     }
 
     private fun sendGuidedMidiNotesToPianoBuddy(currentMidi: Int, nextMidi: Int) {
-        if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED && currentMidi != -1 && nextMidi != -1) {
-            pianoBuddyManager.sendGuidedMidiNotes(currentMidi, nextMidi)
+        if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED) {
+            pianoBuddyManager.sendGuidedMidiNotes(currentMidi, nextMidi, _uiState.value.detectedFrequency)
         }
     }
 
@@ -205,7 +205,8 @@ class PracticeViewModel @Inject constructor(
                             currentPlayingOctave = octave
                         ) 
                     }
-                    sendMidiNoteToPianoBuddy((octave + 1) * 12 + note.ordinal)
+                    sendMidiNoteToPianoBuddy(-1)
+                    sendMidiNoteToPianoBuddy((octave + 1) * 12 + note.ordinal, 0f)
                 }
             )
             _uiState.update { it.copy(isPlaying = false, currentPlayingNote = null, currentPlayingIndex = -1) }
@@ -256,6 +257,7 @@ class PracticeViewModel @Inject constructor(
                     evaluateNote(result.note, result.isStable)
                 } else if (!result.isStable) {
                     // Reset evaluation when pitch becomes unstable
+                    sendMidiNoteToPianoBuddy(-1)
                     _uiState.update { currentState ->
                         currentState.copy(
                             detectedNote = null,
@@ -432,6 +434,7 @@ class PracticeViewModel @Inject constructor(
             
             lastVirtualKeyPressTime = System.currentTimeMillis()
             notePlayer.playNote(target, octave)
+            sendMidiNoteToPianoBuddy(-1)
             sendMidiNoteToPianoBuddy((octave + 1) * 12 + target.ordinal)
         }
     }

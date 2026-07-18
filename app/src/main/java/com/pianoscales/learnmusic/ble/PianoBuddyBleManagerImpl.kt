@@ -46,12 +46,13 @@ class PianoBuddyBleManagerImpl @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.IO)
     private var scanJob: Job? = null
+    private var lastSentMidi: Int? = null
 
     init {
         scope.launch {
-            noteEventDispatcher.noteEvents.collect { midiNote ->
+            noteEventDispatcher.noteEvents.collect { event ->
                 if (_connectionState.value == BleConnectionState.CONNECTED) {
-                    sendMidiNote(midiNote)
+                    sendMidiNote(event.midiNote, event.frequency)
                 }
             }
         }
@@ -164,27 +165,91 @@ class PianoBuddyBleManagerImpl @Inject constructor(
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
+        lastSentMidi = null
         _connectionState.value = BleConnectionState.DISCONNECTED
     }
 
     @SuppressLint("MissingPermission")
-    override fun sendMidiNote(midiNote: Int) {
+    override fun sendMidiNote(midiNote: Int, frequency: Float) {
+        // Rule 4: Silence
+        if (midiNote == -1) {
+            lastSentMidi = null
+            return
+        }
+
+        // Rule 2: Same Note Continues
+        if (midiNote == lastSentMidi) return
+
+        val reason = if (lastSentMidi == null) "First Detection" else "Note Changed"
+        lastSentMidi = midiNote
+
         val gatt = bluetoothGatt ?: return
         val service = gatt.getService(SERVICE_UUID) ?: return
         val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
         
-        characteristic.value = byteArrayOf(midiNote.toByte())
+        val payload = byteArrayOf(midiNote.toByte())
+        characteristic.value = payload
         gatt.writeCharacteristic(characteristic)
+
+        // Instrumentation Logging
+        if (BuildConfig.DEBUG) {
+            val note = com.pianoscales.learnmusic.theory.Note.entries[(midiNote % 12 + 12) % 12]
+            val octave = (midiNote / 12) - 1
+            Log.d(TAG, """
+                ========== PianoBuddy TX ==========
+                Reason      : $reason
+                Mode        : External Piano
+
+                Frequency   : ${if (frequency > 0) String.format(Locale.US, "%.2f Hz", frequency) else "N/A"}
+                Detected    : ${note.displayName}$octave
+                Octave      : $octave
+                MIDI        : $midiNote
+
+                BLE Payload : [${payload.joinToString { it.toString() }}]
+                ===================================
+            """.trimIndent())
+        }
     }
 
     @SuppressLint("MissingPermission")
-    override fun sendGuidedMidiNotes(currentMidi: Int, nextMidi: Int) {
+    override fun sendGuidedMidiNotes(currentMidi: Int, nextMidi: Int, currentFrequency: Float) {
+        // Apply same state-based logic for Guided Practice
+        if (currentMidi == lastSentMidi) return
+
+        val reason = if (lastSentMidi == null) "First Detection" else "Note Changed"
+        lastSentMidi = currentMidi
+
         val gatt = bluetoothGatt ?: return
         val service = gatt.getService(SERVICE_UUID) ?: return
         val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
 
-        characteristic.value = byteArrayOf(currentMidi.toByte(), nextMidi.toByte())
+        val payload = byteArrayOf(currentMidi.toByte(), nextMidi.toByte())
+        characteristic.value = payload
         gatt.writeCharacteristic(characteristic)
+
+        // Instrumentation Logging
+        if (BuildConfig.DEBUG) {
+            val curNote = com.pianoscales.learnmusic.theory.Note.entries[(currentMidi % 12 + 12) % 12]
+            val curOctave = (currentMidi / 12) - 1
+            val nextNote = com.pianoscales.learnmusic.theory.Note.entries[(nextMidi % 12 + 12) % 12]
+            val nextOctave = (nextMidi / 12) - 1
+            
+            Log.d(TAG, """
+                ========== PianoBuddy TX ==========
+                Reason      : $reason
+                Mode        : Guided Practice
+
+                Current Note : ${curNote.displayName}$curOctave
+                Current MIDI : $currentMidi
+                ${if (currentFrequency > 0) "Frequency    : ${String.format(Locale.US, "%.2f Hz", currentFrequency)}" else ""}
+
+                Next Note    : ${nextNote.displayName}$nextOctave
+                Next MIDI    : $nextMidi
+
+                BLE Payload  : [${payload.joinToString { it.toString() }}]
+                ===================================
+            """.trimIndent())
+        }
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
