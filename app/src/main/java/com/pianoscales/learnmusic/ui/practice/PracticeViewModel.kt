@@ -117,9 +117,9 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
-    private fun sendGuidedMidiNotesToPianoBuddy(currentMidi: Int, nextMidi: Int) {
+    private fun sendTargetNoteToPianoBuddy(midiNote: Int, frequency: Float = 0f) {
         if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED) {
-            pianoBuddyManager.sendGuidedMidiNotes(currentMidi, nextMidi, _uiState.value.detectedFrequency)
+            pianoBuddyManager.sendTargetNote(midiNote, frequency)
         }
     }
 
@@ -206,7 +206,7 @@ class PracticeViewModel @Inject constructor(
                         ) 
                     }
                     sendMidiNoteToPianoBuddy(-1)
-                    sendMidiNoteToPianoBuddy((octave + 1) * 12 + note.ordinal, 0f)
+                    sendTargetNoteToPianoBuddy((octave + 1) * 12 + note.ordinal, 0f)
                 }
             )
             _uiState.update { it.copy(isPlaying = false, currentPlayingNote = null, currentPlayingIndex = -1) }
@@ -257,7 +257,7 @@ class PracticeViewModel @Inject constructor(
                     evaluateNote(result.note, result.isStable)
                 } else if (!result.isStable) {
                     // Reset evaluation when pitch becomes unstable
-                    sendMidiNoteToPianoBuddy(-1)
+                    sendTargetNoteToPianoBuddy(-1)
                     _uiState.update { currentState ->
                         currentState.copy(
                             detectedNote = null,
@@ -302,7 +302,7 @@ class PracticeViewModel @Inject constructor(
             return
         }
 
-        var guidedNotes: Pair<Int, Int>? = null
+        var guidedNote: Int? = null
 
         _uiState.update { currentState ->
             var newCompletedNotes = currentState.completedNotes
@@ -339,8 +339,7 @@ class PracticeViewModel @Inject constructor(
                                 onLessonCompleted(currentState.rootNote, currentState.conceptType)
                             } else {
                                 val current = getMidiNoteForIndex(nextIndex)
-                                val next = getMidiNoteForIndex(nextIndex + 1).takeIf { it != -1 } ?: current
-                                guidedNotes = current to next
+                                guidedNote = current
                             }
                         } else {
                             // Incorrect note - do NOT advance, do NOT add to completed notes
@@ -366,7 +365,7 @@ class PracticeViewModel @Inject constructor(
             )
         }
 
-        guidedNotes?.let { (c, n) -> sendGuidedMidiNotesToPianoBuddy(c, n) }
+        guidedNote?.let { n -> sendTargetNoteToPianoBuddy(n) }
     }
 
     fun startGuidedPractice() {
@@ -387,8 +386,7 @@ class PracticeViewModel @Inject constructor(
             )
         }
         val currentMidi = getMidiNoteForIndex(0)
-        val nextMidi = getMidiNoteForIndex(1).takeIf { it != -1 } ?: currentMidi
-        sendGuidedMidiNotesToPianoBuddy(currentMidi, nextMidi)
+        sendTargetNoteToPianoBuddy(currentMidi)
     }
 
     fun startGuidedPracticeWithPermission() {
@@ -434,8 +432,8 @@ class PracticeViewModel @Inject constructor(
             
             lastVirtualKeyPressTime = System.currentTimeMillis()
             notePlayer.playNote(target, octave)
-            sendMidiNoteToPianoBuddy(-1)
-            sendMidiNoteToPianoBuddy((octave + 1) * 12 + target.ordinal)
+            sendTargetNoteToPianoBuddy(-1)
+            sendTargetNoteToPianoBuddy((octave + 1) * 12 + target.ordinal)
         }
     }
 

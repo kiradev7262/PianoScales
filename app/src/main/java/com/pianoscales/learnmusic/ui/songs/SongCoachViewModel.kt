@@ -65,7 +65,7 @@ class SongCoachViewModel @Inject constructor(
                     val song = allSongs.find { it.songId == songId }
                     if (song != null) {
                         _uiState.update { it.copy(song = song) }
-                        sendTargetNotesToPianoBuddy()
+                        sendTargetNoteToPianoBuddy()
                     }
                 }
             }
@@ -75,7 +75,7 @@ class SongCoachViewModel @Inject constructor(
             pianoBuddyManager.connectionState.collect { connectionState ->
                 _uiState.update { it.copy(pianoBuddyConnectionState = connectionState) }
                 if (connectionState == BleConnectionState.CONNECTED) {
-                    sendTargetNotesToPianoBuddy()
+                    sendTargetNoteToPianoBuddy()
                 }
             }
         }
@@ -143,33 +143,14 @@ class SongCoachViewModel @Inject constructor(
         }
     }
 
-    private fun sendTargetNotesToPianoBuddy() {
+    private fun sendTargetNoteToPianoBuddy() {
         val state = _uiState.value
         if (state.pianoBuddyConnectionState != BleConnectionState.CONNECTED) return
 
         val current = state.currentNote ?: return
-        
-        // Find next note in song
-        val song = state.song ?: return
-        var nextNote: NoteWithOctave? = null
-        
-        val currentLine = song.lines.getOrNull(state.currentLineIndex)
-        if (currentLine != null) {
-            if (state.currentNoteIndex + 1 < currentLine.notes.size) {
-                nextNote = currentLine.notes[state.currentNoteIndex + 1]
-            } else if (state.currentLineIndex + 1 < song.lines.size) {
-                nextNote = song.lines[state.currentLineIndex + 1].notes.firstOrNull()
-            }
-        }
-
         val currentMidi = (current.octave + 1) * 12 + current.note.ordinal
-        val nextMidi = if (nextNote != null) {
-            (nextNote.octave + 1) * 12 + nextNote.note.ordinal
-        } else {
-            currentMidi
-        }
         
-        pianoBuddyManager.sendGuidedMidiNotes(currentMidi, nextMidi, state.detectedFrequency)
+        pianoBuddyManager.sendTargetNote(currentMidi, state.detectedFrequency)
     }
 
     private fun advance() {
@@ -189,7 +170,7 @@ class SongCoachViewModel @Inject constructor(
                 }
             }
         }
-        sendTargetNotesToPianoBuddy()
+        sendTargetNoteToPianoBuddy()
     }
 
     fun toggleDemo() {
@@ -233,7 +214,7 @@ class SongCoachViewModel @Inject constructor(
                         isCompleted = previousCompleted
                     ) 
                 }
-                sendTargetNotesToPianoBuddy()
+                sendTargetNoteToPianoBuddy()
                 if (wasListening || _uiState.value.pianoMode == PianoMode.EXTERNAL) {
                     startListening()
                 }
@@ -248,7 +229,7 @@ class SongCoachViewModel @Inject constructor(
     fun reset() {
         if (_uiState.value.isDemoPlaying) stopDemo()
         _uiState.update { it.copy(currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
-        sendTargetNotesToPianoBuddy()
+        sendTargetNoteToPianoBuddy()
     }
 
     override fun onCleared() {

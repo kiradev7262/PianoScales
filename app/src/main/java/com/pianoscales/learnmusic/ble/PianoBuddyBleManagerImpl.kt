@@ -23,6 +23,7 @@ import javax.inject.Singleton
 
 private const val TAG = "PianoBuddyBLE"
 private const val SCAN_TIMEOUT_MS = 10000L
+private const val REQUIRED_CONFIRMATION_FRAMES = 3
 
 @Singleton
 class PianoBuddyBleManagerImpl @Inject constructor(
@@ -47,6 +48,10 @@ class PianoBuddyBleManagerImpl @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO)
     private var scanJob: Job? = null
     private var lastSentMidi: Int? = null
+
+    // Candidate Confirmation State (Debounce)
+    private var pendingMidi: Int? = null
+    private var pendingCount = 0
 
     init {
         scope.launch {
@@ -166,23 +171,100 @@ class PianoBuddyBleManagerImpl @Inject constructor(
         bluetoothGatt?.close()
         bluetoothGatt = null
         lastSentMidi = null
+        pendingMidi = null
+        pendingCount = 0
         _connectionState.value = BleConnectionState.DISCONNECTED
     }
 
     @SuppressLint("MissingPermission")
     override fun sendMidiNote(midiNote: Int, frequency: Float) {
+        // Bypass for Virtual Piano / App Audio
+        if (frequency <= 0f) {
+            handleVirtualMidiNote(midiNote)
+            return
+        }
+
+        // External Piano Logic (Candidate Confirmation / Debounce)
+        
         // Rule 4: Silence
         if (midiNote == -1) {
+            if (pendingMidi != null || lastSentMidi != null) {
+                if (BuildConfig.DEBUG) Log.d(TAG, "Silence detected - Resetting candidate state")
+            }
+            pendingMidi = null
+            pendingCount = 0
             lastSentMidi = null
             return
         }
 
-        // Rule 2: Same Note Continues
+        // Case 1: Same Confirmed Note
+        if (midiNote == lastSentMidi) {
+            if (pendingMidi != null) {
+                if (BuildConfig.DEBUG) Log.d(TAG, "Confirmed note repeated - Discarding candidate $pendingMidi")
+                pendingMidi = null
+                pendingCount = 0
+            }
+            return
+        }
+
+        // Case 2 & 3: Candidate logic
+        if (midiNote == pendingMidi) {
+            pendingCount++
+        } else {
+            if (pendingMidi != null && BuildConfig.DEBUG) {
+                 Log.d(TAG, "Pending MIDI : $pendingMidi, New Detection : $midiNote, Action : Candidate Discarded")
+            }
+            pendingMidi = midiNote
+            pendingCount = 1
+        }
+
+        if (BuildConfig.DEBUG) {
+            val action = if (pendingCount >= REQUIRED_CONFIRMATION_FRAMES) "Promoted" else "Waiting"
+            Log.d(TAG, """
+                Candidate State:
+                Detected MIDI : $midiNote
+                Pending MIDI  : $pendingMidi
+                Pending Count : $pendingCount / $REQUIRED_CONFIRMATION_FRAMES
+                Action        : $action
+            """.trimIndent())
+        }
+
+        // Promotion Rule
+        if (pendingCount >= REQUIRED_CONFIRMATION_FRAMES) {
+            val reason = if (lastSentMidi == null) "First Detection" else "Note Changed"
+            lastSentMidi = midiNote
+            pendingMidi = null
+            pendingCount = 0
+            performBleWrite(midiNote, frequency, "External Piano ($reason)")
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun sendTargetNote(midiNote: Int, frequency: Float) {
+        // Apply same state-based logic for Guided Practice (instant, no debounce)
         if (midiNote == lastSentMidi) return
 
         val reason = if (lastSentMidi == null) "First Detection" else "Note Changed"
         lastSentMidi = midiNote
 
+        performBleWrite(midiNote, frequency, "Guided Practice ($reason)")
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun handleVirtualMidiNote(midiNote: Int) {
+        if (midiNote == -1) {
+            lastSentMidi = null
+            return
+        }
+
+        if (midiNote == lastSentMidi) return
+        
+        lastSentMidi = midiNote
+        performBleWrite(midiNote, 0f, "Virtual Piano / App Audio")
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun performBleWrite(midiNote: Int, frequency: Float, reason: String) {
         val gatt = bluetoothGatt ?: return
         val service = gatt.getService(SERVICE_UUID) ?: return
         val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
@@ -198,7 +280,7 @@ class PianoBuddyBleManagerImpl @Inject constructor(
             Log.d(TAG, """
                 ========== PianoBuddy TX ==========
                 Reason      : $reason
-                Mode        : External Piano
+                Mode        : ${if (frequency > 0) "External Piano" else "Virtual Piano"}
 
                 Frequency   : ${if (frequency > 0) String.format(Locale.US, "%.2f Hz", frequency) else "N/A"}
                 Detected    : ${note.displayName}$octave
@@ -206,47 +288,6 @@ class PianoBuddyBleManagerImpl @Inject constructor(
                 MIDI        : $midiNote
 
                 BLE Payload : [${payload.joinToString { it.toString() }}]
-                ===================================
-            """.trimIndent())
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    override fun sendGuidedMidiNotes(currentMidi: Int, nextMidi: Int, currentFrequency: Float) {
-        // Apply same state-based logic for Guided Practice
-        if (currentMidi == lastSentMidi) return
-
-        val reason = if (lastSentMidi == null) "First Detection" else "Note Changed"
-        lastSentMidi = currentMidi
-
-        val gatt = bluetoothGatt ?: return
-        val service = gatt.getService(SERVICE_UUID) ?: return
-        val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
-
-        val payload = byteArrayOf(currentMidi.toByte(), nextMidi.toByte())
-        characteristic.value = payload
-        gatt.writeCharacteristic(characteristic)
-
-        // Instrumentation Logging
-        if (BuildConfig.DEBUG) {
-            val curNote = com.pianoscales.learnmusic.theory.Note.entries[(currentMidi % 12 + 12) % 12]
-            val curOctave = (currentMidi / 12) - 1
-            val nextNote = com.pianoscales.learnmusic.theory.Note.entries[(nextMidi % 12 + 12) % 12]
-            val nextOctave = (nextMidi / 12) - 1
-            
-            Log.d(TAG, """
-                ========== PianoBuddy TX ==========
-                Reason      : $reason
-                Mode        : Guided Practice
-
-                Current Note : ${curNote.displayName}$curOctave
-                Current MIDI : $currentMidi
-                ${if (currentFrequency > 0) "Frequency    : ${String.format(Locale.US, "%.2f Hz", currentFrequency)}" else ""}
-
-                Next Note    : ${nextNote.displayName}$nextOctave
-                Next MIDI    : $nextMidi
-
-                BLE Payload  : [${payload.joinToString { it.toString() }}]
                 ===================================
             """.trimIndent())
         }

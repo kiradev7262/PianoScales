@@ -32,5 +32,5 @@ interface PianoBuddyBleManager {
     fun connectToDevice(device: BleDevice)
     fun disconnect()
     fun sendMidiNote(midiNote: Int, frequency: Float = 0f)
-    fun sendGuidedMidiNotes(currentMidi: Int, nextMidi: Int, currentFrequency: Float = 0f)
+    fun sendTargetNote(midiNote: Int, frequency: Float = 0f)
 }
