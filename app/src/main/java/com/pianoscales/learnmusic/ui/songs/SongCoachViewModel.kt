@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.pianoscales.learnmusic.audio.playback.SoundPoolManager
 import com.pianoscales.learnmusic.audio.pitch.PitchDetector
 import com.pianoscales.learnmusic.audio.pitch.PitchToNoteMapper
+import com.pianoscales.learnmusic.ble.BleConnectionState
+import com.pianoscales.learnmusic.ble.PianoBuddyBleManager
 import com.pianoscales.learnmusic.domain.settings.SettingsRepository
 import com.pianoscales.learnmusic.domain.songs.SongRepository
 import com.pianoscales.learnmusic.theory.Note
@@ -28,7 +30,8 @@ data class SongCoachUiState(
     val detectedMidi: Int? = null,
     val detectedFrequency: Float = 0f,
     val confidence: Float = 0f,
-    val timestamp: Long = 0L
+    val timestamp: Long = 0L,
+    val pianoBuddyConnectionState: BleConnectionState = BleConnectionState.IDLE
 ) {
     val currentLine: SongLine? get() = song?.lines?.getOrNull(currentLineIndex)
     val currentNote: NoteWithOctave? get() = currentLine?.notes?.getOrNull(currentNoteIndex)
@@ -40,6 +43,7 @@ class SongCoachViewModel @Inject constructor(
     private val songRepository: SongRepository,
     private val pitchDetector: PitchDetector,
     private val settingsRepository: SettingsRepository,
+    private val pianoBuddyManager: PianoBuddyBleManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SongCoachUiState())
@@ -61,7 +65,17 @@ class SongCoachViewModel @Inject constructor(
                     val song = allSongs.find { it.songId == songId }
                     if (song != null) {
                         _uiState.update { it.copy(song = song) }
+                        sendTargetNotesToPianoBuddy()
                     }
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            pianoBuddyManager.connectionState.collect { connectionState ->
+                _uiState.update { it.copy(pianoBuddyConnectionState = connectionState) }
+                if (connectionState == BleConnectionState.CONNECTED) {
+                    sendTargetNotesToPianoBuddy()
                 }
             }
         }
@@ -129,6 +143,35 @@ class SongCoachViewModel @Inject constructor(
         }
     }
 
+    private fun sendTargetNotesToPianoBuddy() {
+        val state = _uiState.value
+        if (state.pianoBuddyConnectionState != BleConnectionState.CONNECTED) return
+
+        val current = state.currentNote ?: return
+        
+        // Find next note in song
+        val song = state.song ?: return
+        var nextNote: NoteWithOctave? = null
+        
+        val currentLine = song.lines.getOrNull(state.currentLineIndex)
+        if (currentLine != null) {
+            if (state.currentNoteIndex + 1 < currentLine.notes.size) {
+                nextNote = currentLine.notes[state.currentNoteIndex + 1]
+            } else if (state.currentLineIndex + 1 < song.lines.size) {
+                nextNote = song.lines[state.currentLineIndex + 1].notes.firstOrNull()
+            }
+        }
+
+        val currentMidi = (current.octave + 1) * 12 + current.note.ordinal
+        val nextMidi = if (nextNote != null) {
+            (nextNote.octave + 1) * 12 + nextNote.note.ordinal
+        } else {
+            currentMidi
+        }
+        
+        pianoBuddyManager.sendGuidedMidiNotes(currentMidi, nextMidi, state.detectedFrequency)
+    }
+
     private fun advance() {
         _uiState.update { state ->
             val song = state.song ?: return@update state
@@ -146,6 +189,7 @@ class SongCoachViewModel @Inject constructor(
                 }
             }
         }
+        sendTargetNotesToPianoBuddy()
     }
 
     fun toggleDemo() {
@@ -189,6 +233,7 @@ class SongCoachViewModel @Inject constructor(
                         isCompleted = previousCompleted
                     ) 
                 }
+                sendTargetNotesToPianoBuddy()
                 if (wasListening || _uiState.value.pianoMode == PianoMode.EXTERNAL) {
                     startListening()
                 }
@@ -203,6 +248,7 @@ class SongCoachViewModel @Inject constructor(
     fun reset() {
         if (_uiState.value.isDemoPlaying) stopDemo()
         _uiState.update { it.copy(currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
+        sendTargetNotesToPianoBuddy()
     }
 
     override fun onCleared() {
