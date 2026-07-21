@@ -1,6 +1,7 @@
 package com.pianoscales.learnmusic.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -78,11 +79,11 @@ fun MainScreen() {
                         items.forEach { screen ->
                             NavigationBarItem(
                                 icon = { Icon(screen.icon, contentDescription = null) },
-                                label = { 
+                                label = {
                                     Text(
                                         text = screen.label,
                                         fontSize = 10.8.sp
-                                    ) 
+                                    )
                                 },
                                 selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                                 onClick = {
@@ -110,8 +111,8 @@ fun MainScreen() {
             NavHost(
                 navController = navController,
                 startDestination = BottomNavScreen.Journey.route,
-                modifier = Modifier.padding(
-                    bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp
+                modifier = Modifier.padding(innerPadding)
+                    .consumeWindowInsets(innerPadding
                 )
             ) {
                 composable(
@@ -133,7 +134,7 @@ fun MainScreen() {
                 }
                 composable(BottomNavScreen.Me.route) {
                     MeNavHost(
-                        onNavigateToJourney = { subRoute -> 
+                        onNavigateToJourney = { subRoute ->
                             val route = if (subRoute != null) {
                                 "${BottomNavScreen.Journey.route}?subRoute=$subRoute"
                             } else {

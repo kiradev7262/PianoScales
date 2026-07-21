@@ -613,6 +613,65 @@ fun HandToggle(
 }
 
 @Composable
+fun PracticeModeToggle(
+    isAscendingDescending: Boolean,
+    onToggle: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(enabled = enabled) { onToggle() },
+        color = CardSurface,
+        border = if (isAscendingDescending) BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.5f)) else null
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (isAscendingDescending) Icons.Default.Refresh else Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = if (isAscendingDescending) PrimaryAccent else TextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Ascending + Descending",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (enabled) TextPrimary else TextPrimary.copy(alpha = 0.5f)
+                    )
+                    Text(
+                        text = "Practice both directions",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextMuted
+                    )
+                }
+            }
+            
+            Switch(
+                checked = isAscendingDescending,
+                onCheckedChange = { onToggle() },
+                enabled = enabled,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = PrimaryAccent,
+                    checkedTrackColor = PrimaryAccent.copy(alpha = 0.2f),
+                    uncheckedThumbColor = TextMuted,
+                    uncheckedTrackColor = ElevatedSurface
+                )
+            )
+        }
+    }
+}
+
+@Composable
 fun PracticeTheoryCard(
     title: String,
     modifier: Modifier = Modifier,

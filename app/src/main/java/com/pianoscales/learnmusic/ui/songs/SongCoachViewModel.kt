@@ -196,14 +196,25 @@ class SongCoachViewModel @Inject constructor(
             _uiState.update { it.copy(isDemoPlaying = true, currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
             
             try {
+                var lastTimestamp: Long? = null
+                
                 song.lines.forEachIndexed { lineIndex, line ->
-                    _uiState.update { it.copy(currentLineIndex = lineIndex, currentNoteIndex = 0) }
                     line.notes.forEachIndexed { noteIndex, noteWithOctave ->
-                        _uiState.update { it.copy(currentNoteIndex = noteIndex) }
+                        val currentTimestamp = noteWithOctave.timestamp
+                        val lastTs = lastTimestamp
+                        if (lastTs != null && currentTimestamp != null) {
+                            val delay = (currentTimestamp - lastTs).coerceAtLeast(0)
+                            kotlinx.coroutines.delay(delay)
+                        } else if (lineIndex > 0 || noteIndex > 0) {
+                            // Legacy fixed interval
+                            val delay = if (noteIndex == 0) 650L else 450L
+                            kotlinx.coroutines.delay(delay)
+                        }
+
+                        _uiState.update { it.copy(currentLineIndex = lineIndex, currentNoteIndex = noteIndex) }
                         soundPoolManager.playNote(noteWithOctave.note, noteWithOctave.octave)
-                        kotlinx.coroutines.delay(450)
+                        lastTimestamp = currentTimestamp
                     }
-                    kotlinx.coroutines.delay(200) // Small gap between lines
                 }
             } finally {
                 _uiState.update { 

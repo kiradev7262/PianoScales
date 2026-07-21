@@ -20,7 +20,8 @@ data class SongLine(
 
 data class NoteWithOctave(
     val note: Note,
-    val octave: Int
+    val octave: Int,
+    val timestamp: Long? = null
 )
 
 enum class PianoMode {
