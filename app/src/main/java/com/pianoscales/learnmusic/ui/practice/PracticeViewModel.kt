@@ -112,16 +112,27 @@ class PracticeViewModel @Inject constructor(
     }
 
     private fun getMidiNoteForIndex(index: Int): Int {
-        val notes = _uiState.value.generatedNotes
+        val notes = _uiState.value.getGuidedPracticeNotes()
         if (index < 0 || index >= notes.size) return -1
 
         var currentOctave = 4
         var lastNoteOrdinal = -1
+        val ascendingSize = _uiState.value.generatedNotes.size
 
         for (i in 0..index) {
             val note = notes[i]
-            if (i > 0 && note.ordinal <= lastNoteOrdinal) {
-                currentOctave++
+            if (i > 0) {
+                if (i < ascendingSize) {
+                    // Ascending portion
+                    if (note.ordinal <= lastNoteOrdinal) {
+                        currentOctave++
+                    }
+                } else {
+                    // Descending portion
+                    if (note.ordinal >= lastNoteOrdinal) {
+                        currentOctave--
+                    }
+                }
             }
             lastNoteOrdinal = note.ordinal
             if (i == index) {
@@ -215,24 +226,36 @@ class PracticeViewModel @Inject constructor(
     fun playSequence() {
         if (_uiState.value.isPlaying || _uiState.value.isListening || !_uiState.value.isAudioLoaded) return
 
+        val guidedNotes = _uiState.value.getGuidedPracticeNotes()
+        if (guidedNotes.isEmpty()) return
+
         viewModelScope.launch {
             _uiState.update { it.copy(isPlaying = true) }
             profileRepository.updateStreak()
-            notePlayer.playSequence(
-                notes = _uiState.value.generatedNotes,
-                onNoteStarted = { index, note, octave ->
-                    lastVirtualKeyPressTime = System.currentTimeMillis()
-                    _uiState.update { 
-                        it.copy(
-                            currentPlayingNote = note,
-                            currentPlayingIndex = index,
-                            currentPlayingOctave = octave
-                        ) 
-                    }
-                    sendMidiNoteToPianoBuddy(-1)
-                    sendTargetNoteToPianoBuddy((octave + 1) * 12 + note.ordinal, 0f)
+
+            // We play the notes one by one to ensure correct octave handling for descending mode
+            guidedNotes.forEachIndexed { index, note ->
+                if (!_uiState.value.isPlaying) return@forEachIndexed
+
+                val midiNote = getMidiNoteForIndex(index)
+                val octave = (midiNote / 12) - 1
+
+                lastVirtualKeyPressTime = System.currentTimeMillis()
+                _uiState.update {
+                    it.copy(
+                        currentPlayingNote = note,
+                        currentPlayingIndex = index,
+                        currentPlayingOctave = octave
+                    )
                 }
-            )
+
+                sendMidiNoteToPianoBuddy(-1)
+                sendTargetNoteToPianoBuddy(midiNote, 0f)
+                notePlayer.playNote(note, octave)
+
+                kotlinx.coroutines.delay(500)
+            }
+
             _uiState.update { it.copy(isPlaying = false, currentPlayingNote = null, currentPlayingIndex = -1) }
         }
     }
@@ -437,42 +460,17 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun playTargetNote() {
-        val target = _uiState.value.guidedPractice.targetNote
         val currentIndex = _uiState.value.guidedPractice.currentIndex
-        val guidedNotes = _uiState.value.getGuidedPracticeNotes()
-        
-        if (target != null) {
-            var octave = 4
-            // Calculate octave if target is part of the current sequence at the current index
-            if (currentIndex < guidedNotes.size && guidedNotes[currentIndex] == target) {
-                var lastNoteOrdinal = -1
-                var currentOctave = 4
-                val ascendingSize = _uiState.value.generatedNotes.size
+        val midiNote = getMidiNoteForIndex(currentIndex)
 
-                for (i in 0..currentIndex) {
-                    val note = guidedNotes[i]
-                    if (i > 0) {
-                        if (i < ascendingSize) {
-                            // Ascending: note <= last means octave++
-                            if (note.ordinal <= lastNoteOrdinal) {
-                                currentOctave++
-                            }
-                        } else {
-                            // Descending: note >= last means octave--
-                            if (note.ordinal >= lastNoteOrdinal) {
-                                currentOctave--
-                            }
-                        }
-                    }
-                    lastNoteOrdinal = note.ordinal
-                }
-                octave = currentOctave
-            }
-            
+        if (midiNote != -1) {
+            val target = _uiState.value.guidedPractice.targetNote ?: return
+            val octave = (midiNote / 12) - 1
+
             lastVirtualKeyPressTime = System.currentTimeMillis()
             notePlayer.playNote(target, octave)
             sendTargetNoteToPianoBuddy(-1)
-            sendTargetNoteToPianoBuddy((octave + 1) * 12 + target.ordinal)
+            sendTargetNoteToPianoBuddy(midiNote)
         }
     }
 
