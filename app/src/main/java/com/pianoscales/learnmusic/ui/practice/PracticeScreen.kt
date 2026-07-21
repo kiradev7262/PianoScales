@@ -134,6 +134,9 @@ fun PracticeTabContent(
 ) {
     val context = LocalContext.current
     
+    val guidedNotes = uiState.getGuidedPracticeNotes()
+    val guidedFingering = uiState.getGuidedPracticeFingering()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -144,7 +147,7 @@ fun PracticeTabContent(
             lessonName = "${uiState.rootNote.displayName} ${uiState.conceptType.displayName}",
             completedNotes = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.completedNotes.size
                             else uiState.completedNotes.size,
-            totalNotes = uiState.generatedNotes.size,
+            totalNotes = guidedNotes.size,
             formula = uiState.theoryExplanation?.formula ?: "--"
         )
 
@@ -198,7 +201,6 @@ fun PracticeTabContent(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        val fingeringGuide = uiState.getCurrentFingeringGuide()
         val lazyListState = rememberLazyListState()
 
         // Auto-scroll logic
@@ -212,23 +214,28 @@ fun PracticeTabContent(
             }
 
             val indexToScroll = if (rawIndex != -1) {
-                rawIndex.coerceAtMost(uiState.generatedNotes.size - 1)
+                rawIndex.coerceAtMost(guidedNotes.size - 1)
             } else {
                 -1
             }
 
             if (indexToScroll != -1) {
-                val activeNote = uiState.generatedNotes.getOrNull(indexToScroll)
+                val activeNote = guidedNotes.getOrNull(indexToScroll)
                 val octave = if (uiState.isPlaying) {
                     uiState.currentPlayingOctave
                 } else {
                     // Calculate octave for guided practice
                     var lastNoteOrdinal = -1
                     var currentOctave = 4
+                    val ascendingSize = uiState.generatedNotes.size
                     for (i in 0..indexToScroll) {
-                        val note = uiState.generatedNotes.getOrNull(i) ?: break
-                        if (i > 0 && note.ordinal <= lastNoteOrdinal) {
-                            currentOctave++
+                        val note = guidedNotes.getOrNull(i) ?: break
+                        if (i > 0) {
+                            if (i < ascendingSize) {
+                                if (note.ordinal <= lastNoteOrdinal) currentOctave++
+                            } else {
+                                if (note.ordinal >= lastNoteOrdinal) currentOctave--
+                            }
                         }
                         lastNoteOrdinal = note.ordinal
                     }
@@ -255,7 +262,7 @@ fun PracticeTabContent(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            itemsIndexed(uiState.generatedNotes) { index, note ->
+            itemsIndexed(guidedNotes) { index, note ->
                 val isCompleted = if (uiState.guidedPractice.isRunning) {
                     uiState.guidedPractice.completedNotes.contains(index)
                 } else {
@@ -271,7 +278,7 @@ fun PracticeTabContent(
 
                 NoteChip(
                     note = note,
-                    fingerNumber = fingeringGuide?.steps?.getOrNull(index)?.finger?.number,
+                    fingerNumber = guidedFingering.getOrNull(index)?.number,
                     isPlaying = uiState.currentPlayingNote == note,
                     isCompleted = isCompleted,
                     isDetected = isDetected,
@@ -283,9 +290,17 @@ fun PracticeTabContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        PracticeModeToggle(
+            isAscendingDescending = uiState.isAscendingDescendingMode,
+            onToggle = { viewModel.toggleAscendingDescendingMode() },
+            enabled = !uiState.guidedPractice.isRunning
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         GuidedPracticeCard(
             state = uiState.guidedPractice,
-            totalNotes = uiState.generatedNotes.size,
+            totalNotes = uiState.getGuidedPracticeNotes().size,
             onStart = { checkAndRun("Guided Session") { viewModel.startGuidedPracticeWithPermission() } },
             onReset = { checkAndRun("Guided Session") { viewModel.startGuidedPracticeWithPermission() } },
             onCancel = { viewModel.stopGuidedPractice() },
