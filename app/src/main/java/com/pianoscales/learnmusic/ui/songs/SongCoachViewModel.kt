@@ -52,6 +52,13 @@ class SongCoachViewModel @Inject constructor(
     private var pitchDetectionJob: Job? = null
     private var demoJob: Job? = null
 
+    private enum class InputState {
+        WAITING_FOR_PRESS,
+        WAITING_FOR_RELEASE
+    }
+
+    private var inputState = InputState.WAITING_FOR_PRESS
+
     init {
         val songId: String? = savedStateHandle["songId"]
         if (songId != null) {
@@ -109,10 +116,19 @@ class SongCoachViewModel @Inject constructor(
                         timestamp = result.timestamp
                     )
                 }
-                if (result.isStable && result.note != null) {
+
+                // Songs Press-Release State Machine (External Piano Only)
+                // Existing silence threshold is 0.005f from PitchDetector
+                val isActuallyPlaying = result.isStable && result.note != null && result.amplitude > 0.005f
+
+                if (isActuallyPlaying) {
                     val detectedNoteWithOctave = PitchToNoteMapper.mapFrequencyToNoteWithOctave(result.frequency)
                     if (detectedNoteWithOctave != null) {
                         evaluateNote(detectedNoteWithOctave.note, detectedNoteWithOctave.octave)
+                    }
+                } else {
+                    if (_uiState.value.pianoMode == PianoMode.EXTERNAL) {
+                        inputState = InputState.WAITING_FOR_PRESS
                     }
                 }
             }
@@ -123,6 +139,7 @@ class SongCoachViewModel @Inject constructor(
         pitchDetectionJob?.cancel()
         pitchDetectionJob = null
         pitchDetector.stopListening()
+        inputState = InputState.WAITING_FOR_PRESS
         _uiState.update { it.copy(isListening = false) }
     }
 
@@ -137,9 +154,21 @@ class SongCoachViewModel @Inject constructor(
         val state = _uiState.value
         if (state.isCompleted || state.song == null || state.isDemoPlaying) return
 
-        val expected = state.currentNote ?: return
-        if (note == expected.note && octave == expected.octave) {
-            advance()
+        if (state.pianoMode == PianoMode.EXTERNAL) {
+            // State machine: Only allow matching if we are waiting for a press
+            if (inputState == InputState.WAITING_FOR_RELEASE) return
+
+            val expected = state.currentNote ?: return
+            if (note == expected.note && octave == expected.octave) {
+                advance()
+                inputState = InputState.WAITING_FOR_RELEASE
+            }
+        } else {
+            // Virtual piano - legacy behavior (no release required)
+            val expected = state.currentNote ?: return
+            if (note == expected.note && octave == expected.octave) {
+                advance()
+            }
         }
     }
 
@@ -240,6 +269,7 @@ class SongCoachViewModel @Inject constructor(
     fun reset() {
         if (_uiState.value.isDemoPlaying) stopDemo()
         _uiState.update { it.copy(currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
+        inputState = InputState.WAITING_FOR_PRESS
         sendTargetNoteToPianoBuddy()
     }
 
