@@ -115,7 +115,8 @@ fun PianoBuddyFreestyleScreen(
 
             if (inputMode == FreestyleInputMode.VIRTUAL_PIANO) {
                 FreestylePiano(
-                    onNoteClick = { note, octave -> viewModel.onNotePlayed(note, octave) },
+                    onNoteDown = { note, octave, pointerId -> viewModel.onNoteDown(note, octave, pointerId) },
+                    onNoteUp = { pointerId -> viewModel.onNoteUp(pointerId) },
                     octaves = listOf(2, 3, 4, 5, 6, 7),
                     height = if (isLandscape) 300.dp else 240.dp // Make it larger in landscape
                 )

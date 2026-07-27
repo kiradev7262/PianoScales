@@ -61,6 +61,21 @@ class PianoBuddyBleManagerImpl @Inject constructor(
                 }
             }
         }
+        scope.launch {
+            noteEventDispatcher.activeNotes.collect { notes ->
+                if (_connectionState.value == BleConnectionState.CONNECTED) {
+                    sendActiveNotes(notes)
+                }
+            }
+        }
+        // Ensure latest active notes are sent upon connection
+        scope.launch {
+            _connectionState.collect { state ->
+                if (state == BleConnectionState.CONNECTED) {
+                    sendActiveNotes(noteEventDispatcher.activeNotes.value)
+                }
+            }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -289,6 +304,46 @@ class PianoBuddyBleManagerImpl @Inject constructor(
 
                 BLE Payload : [${payload.joinToString { it.toString() }}]
                 ===================================
+            """.trimIndent())
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun sendActiveNotes(notes: Set<Int>) {
+        val gatt = bluetoothGatt ?: return
+        val service = gatt.getService(SERVICE_UUID) ?: return
+        val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
+
+        // New Packet Format: [COMMAND_BYTE, note1, note2, ...]
+        // 0xFE (254) is our command byte for Polyphonic Active Notes
+        val payload = ByteArray(notes.size + 1)
+        payload[0] = 0xFE.toByte()
+        notes.forEachIndexed { index, note ->
+            payload[index + 1] = note.toByte()
+        }
+        
+        characteristic.value = payload
+        val success = gatt.writeCharacteristic(characteristic)
+
+        // Instrumentation Logging
+        if (BuildConfig.DEBUG) {
+            val noteNames = notes.map { midiNote ->
+                val noteName = com.pianoscales.learnmusic.theory.Note.entries[(midiNote % 12 + 12) % 12].displayName
+                val octave = (midiNote / 12) - 1
+                "$noteName$octave"
+            }
+            Log.d(TAG, """
+                ========== PianoBuddy TX (Polyphonic) ==========
+                Reason      : Buddy Active Notes
+                Mode        : Virtual Piano
+                Status      : ${if (success) "Success" else "Failed"}
+
+                Notes       : ${noteNames.joinToString(" ")}
+                MIDI        : ${notes.toList()}
+                Packet Size : ${payload.size}
+
+                BLE Payload : [${payload.joinToString { it.toString() }}]
+                ================================================
             """.trimIndent())
         }
     }
