@@ -33,4 +33,5 @@ interface PianoBuddyBleManager {
     fun disconnect()
     fun sendMidiNote(midiNote: Int, frequency: Float = 0f)
     fun sendTargetNote(midiNote: Int, frequency: Float = 0f)
+    fun sendTargetNoteWithBlink(midiNote: Int, frequency: Float = 0f)
 }

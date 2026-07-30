@@ -142,12 +142,6 @@ class PracticeViewModel @Inject constructor(
         return -1
     }
 
-    private fun sendMidiNoteToPianoBuddy(midiNote: Int, frequency: Float = 0f) {
-        if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED) {
-            pianoBuddyManager.sendMidiNote(midiNote, frequency)
-        }
-    }
-
     private fun sendTargetNoteToPianoBuddy(midiNote: Int, frequency: Float = 0f) {
         if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED) {
             pianoBuddyManager.sendTargetNote(midiNote, frequency)
@@ -249,7 +243,6 @@ class PracticeViewModel @Inject constructor(
                     )
                 }
 
-                sendMidiNoteToPianoBuddy(-1)
                 sendTargetNoteToPianoBuddy(midiNote, 0f)
                 notePlayer.playNote(note, octave)
 
@@ -304,7 +297,6 @@ class PracticeViewModel @Inject constructor(
                     evaluateNote(result.note, result.isStable)
                 } else if (!result.isStable) {
                     // Reset evaluation when pitch becomes unstable
-                    sendTargetNoteToPianoBuddy(-1)
                     _uiState.update { currentState ->
                         currentState.copy(
                             detectedNote = null,
@@ -469,7 +461,6 @@ class PracticeViewModel @Inject constructor(
 
             lastVirtualKeyPressTime = System.currentTimeMillis()
             notePlayer.playNote(target, octave)
-            sendTargetNoteToPianoBuddy(-1)
             sendTargetNoteToPianoBuddy(midiNote)
         }
     }

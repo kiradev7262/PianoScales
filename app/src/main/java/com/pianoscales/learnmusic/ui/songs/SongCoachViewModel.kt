@@ -1,5 +1,6 @@
 package com.pianoscales.learnmusic.ui.songs
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,7 @@ import com.pianoscales.learnmusic.domain.songs.SongRepository
 import com.pianoscales.learnmusic.theory.Note
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -58,6 +60,9 @@ class SongCoachViewModel @Inject constructor(
     }
 
     private var inputState = InputState.WAITING_FOR_PRESS
+    private var lastMatchedMidi: Int? = null
+    private var silenceCounter = 0
+    private val REQUIRED_SILENCE_FRAMES = 3 // ~60-100ms at typical detection rates
 
     init {
         val songId: String? = savedStateHandle["songId"]
@@ -118,17 +123,24 @@ class SongCoachViewModel @Inject constructor(
                 }
 
                 // Songs Press-Release State Machine (External Piano Only)
-                // Existing silence threshold is 0.005f from PitchDetector
                 val isActuallyPlaying = result.isStable && result.note != null && result.amplitude > 0.005f
 
                 if (isActuallyPlaying) {
+                    silenceCounter = 0
                     val detectedNoteWithOctave = PitchToNoteMapper.mapFrequencyToNoteWithOctave(result.frequency)
                     if (detectedNoteWithOctave != null) {
                         evaluateNote(detectedNoteWithOctave.note, detectedNoteWithOctave.octave)
                     }
                 } else {
                     if (_uiState.value.pianoMode == PianoMode.EXTERNAL) {
-                        inputState = InputState.WAITING_FOR_PRESS
+                        silenceCounter++
+                        if (silenceCounter >= REQUIRED_SILENCE_FRAMES) {
+                            if (inputState == InputState.WAITING_FOR_RELEASE) {
+                                Log.d("SongCoach", "Release confirmed after $silenceCounter frames of silence. Transitioning to WAITING_FOR_PRESS")
+                            }
+                            inputState = InputState.WAITING_FOR_PRESS
+                            lastMatchedMidi = null
+                        }
                     }
                 }
             }
@@ -140,6 +152,8 @@ class SongCoachViewModel @Inject constructor(
         pitchDetectionJob = null
         pitchDetector.stopListening()
         inputState = InputState.WAITING_FOR_PRESS
+        lastMatchedMidi = null
+        silenceCounter = 0
         _uiState.update { it.copy(isListening = false) }
     }
 
@@ -155,13 +169,29 @@ class SongCoachViewModel @Inject constructor(
         if (state.isCompleted || state.song == null || state.isDemoPlaying) return
 
         if (state.pianoMode == PianoMode.EXTERNAL) {
-            // State machine: Only allow matching if we are waiting for a press
-            if (inputState == InputState.WAITING_FOR_RELEASE) return
-
             val expected = state.currentNote ?: return
+            val detectedMidi = (octave + 1) * 12 + note.ordinal
+            
+            Log.d("SongCoach", "Evaluate: Index ${state.currentNoteIndex}, Expected: ${expected.note}${expected.octave}, Detected: $note$octave, State: $inputState, LastMatched: $lastMatchedMidi")
+
+            // State machine check
+            if (inputState == InputState.WAITING_FOR_RELEASE) {
+                if (detectedMidi == lastMatchedMidi) {
+                    // Still holding the previous note, ignore
+                    return
+                } else {
+                    // Different note detected - allow "legato" transition for different notes
+                    Log.d("SongCoach", "Different note detected ($note$octave). Assuming release of $lastMatchedMidi. Transitioning to WAITING_FOR_PRESS")
+                    inputState = InputState.WAITING_FOR_PRESS
+                    // Continue to check if this new note matches the current expected note
+                }
+            }
+
             if (note == expected.note && octave == expected.octave) {
+                Log.d("SongCoach_BLE", "Match Detected: $note$octave. Current Index: ${state.currentNoteIndex}")
                 advance()
                 inputState = InputState.WAITING_FOR_RELEASE
+                lastMatchedMidi = detectedMidi
             }
         } else {
             // Virtual piano - legacy behavior (no release required)
@@ -172,17 +202,24 @@ class SongCoachViewModel @Inject constructor(
         }
     }
 
-    private fun sendTargetNoteToPianoBuddy() {
+    private fun sendTargetNoteToPianoBuddy(forceBlink: Boolean = false) {
         val state = _uiState.value
         if (state.pianoBuddyConnectionState != BleConnectionState.CONNECTED) return
 
         val current = state.currentNote ?: return
         val currentMidi = (current.octave + 1) * 12 + current.note.ordinal
         
-        pianoBuddyManager.sendTargetNote(currentMidi, state.detectedFrequency)
+        if (forceBlink) {
+            pianoBuddyManager.sendTargetNoteWithBlink(currentMidi, state.detectedFrequency)
+        } else {
+            pianoBuddyManager.sendTargetNote(currentMidi, state.detectedFrequency)
+        }
     }
 
     private fun advance() {
+        val previousNote = _uiState.value.currentNote
+        val previousMidi = previousNote?.let { (it.octave + 1) * 12 + it.note.ordinal }
+
         _uiState.update { state ->
             val song = state.song ?: return@update state
             val currentLine = state.currentLine ?: return@update state
@@ -199,7 +236,27 @@ class SongCoachViewModel @Inject constructor(
                 }
             }
         }
-        sendTargetNoteToPianoBuddy()
+
+        val state = _uiState.value
+        val currentNote = state.currentNote
+        val currentMidi = currentNote?.let { (it.octave + 1) * 12 + it.note.ordinal }
+        
+        Log.d("SongCoach_BLE", "Song Index After Advance: ${state.currentNoteIndex}")
+        Log.d("SongCoach_BLE", "Previous Expected Note: ${previousNote?.note}${previousNote?.octave} (MIDI: $previousMidi)")
+        Log.d("SongCoach_BLE", "Current Expected Note After Advance: ${currentNote?.note}${currentNote?.octave} (MIDI: $currentMidi)")
+        
+        if (currentNote != null) {
+            val isRepeated = previousMidi == currentMidi
+            Log.d("SongCoach_BLE", "Repeated Note Detected: $isRepeated")
+            
+            val shouldBlink = state.pianoMode == PianoMode.EXTERNAL && 
+                             state.pianoBuddyConnectionState == BleConnectionState.CONNECTED && 
+                             isRepeated
+                             
+            sendTargetNoteToPianoBuddy(forceBlink = shouldBlink)
+        } else {
+            sendTargetNoteToPianoBuddy()
+        }
     }
 
     fun toggleDemo() {
@@ -232,12 +289,12 @@ class SongCoachViewModel @Inject constructor(
                         val currentTimestamp = noteWithOctave.timestamp
                         val lastTs = lastTimestamp
                         if (lastTs != null && currentTimestamp != null) {
-                            val delay = (currentTimestamp - lastTs).coerceAtLeast(0)
-                            kotlinx.coroutines.delay(delay)
+                            val delayVal = (currentTimestamp - lastTs).coerceAtLeast(0)
+                            delay(delayVal)
                         } else if (lineIndex > 0 || noteIndex > 0) {
                             // Legacy fixed interval
-                            val delay = if (noteIndex == 0) 650L else 450L
-                            kotlinx.coroutines.delay(delay)
+                            val delayVal = if (noteIndex == 0) 650L else 450L
+                            delay(delayVal)
                         }
 
                         _uiState.update { it.copy(currentLineIndex = lineIndex, currentNoteIndex = noteIndex) }
@@ -270,6 +327,8 @@ class SongCoachViewModel @Inject constructor(
         if (_uiState.value.isDemoPlaying) stopDemo()
         _uiState.update { it.copy(currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
         inputState = InputState.WAITING_FOR_PRESS
+        lastMatchedMidi = null
+        silenceCounter = 0
         sendTargetNoteToPianoBuddy()
     }
 

@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,7 +49,9 @@ class PianoBuddyBleManagerImpl @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.IO)
     private var scanJob: Job? = null
-    private var lastSentMidi: Int? = null
+    private val bleMutex = Mutex()
+    @Volatile private var lastSentFeedbackMidi: Int? = null
+    @Volatile private var lastSentTargetMidi: Int? = null
 
     // Candidate Confirmation State (Debounce)
     private var pendingMidi: Int? = null
@@ -133,13 +137,12 @@ class PianoBuddyBleManagerImpl @Inject constructor(
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
             val deviceName = device.name
-            val deviceAddress = if (BuildConfig.DEBUG) device.address else ""
             val rssi = result.rssi
 
             val bleDevice = BleDevice(deviceName, device.address, rssi)
             
             if (!_discoveredDevices.value.any { it.address == bleDevice.address }) {
-                Log.d(TAG, "Device found: $deviceName ($deviceAddress) RSSI: $rssi")
+                Log.d(TAG, "Device found: $deviceName (${device.address}) RSSI: $rssi")
                 val newList = _discoveredDevices.value + bleDevice
                 _discoveredDevices.value = newList
 
@@ -166,7 +169,7 @@ class PianoBuddyBleManagerImpl @Inject constructor(
 
     @SuppressLint("MissingPermission")
     override fun connectToDevice(device: BleDevice) {
-        Log.d(TAG, "Connecting to ${device.name ?: "Unknown"} (${if (BuildConfig.DEBUG) device.address else "..."})")
+        Log.d(TAG, "Connecting to ${device.name ?: "Unknown"} (${device.address})")
         _connectionState.value = BleConnectionState.CONNECTING
         
         val remoteDevice = bluetoothAdapter?.getRemoteDevice(device.address)
@@ -185,7 +188,8 @@ class PianoBuddyBleManagerImpl @Inject constructor(
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
-        lastSentMidi = null
+        lastSentFeedbackMidi = null
+        lastSentTargetMidi = null
         pendingMidi = null
         pendingCount = 0
         _connectionState.value = BleConnectionState.DISCONNECTED
@@ -199,23 +203,21 @@ class PianoBuddyBleManagerImpl @Inject constructor(
             return
         }
 
-        // External Piano Logic (Candidate Confirmation / Debounce)
-        
         // Rule 4: Silence
         if (midiNote == -1) {
-            if (pendingMidi != null || lastSentMidi != null) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "Silence detected - Resetting candidate state")
+            if (pendingMidi != null || lastSentFeedbackMidi != null) {
+                Log.d("SongCoach_BLE", "Silence detected - Resetting candidate state. lastSentFeedbackMidi was $lastSentFeedbackMidi")
             }
             pendingMidi = null
             pendingCount = 0
-            lastSentMidi = null
+            lastSentFeedbackMidi = null
             return
         }
 
         // Case 1: Same Confirmed Note
-        if (midiNote == lastSentMidi) {
+        if (midiNote == lastSentFeedbackMidi) {
             if (pendingMidi != null) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "Confirmed note repeated - Discarding candidate $pendingMidi")
+                Log.d("SongCoach_BLE", "sendMidiNote($midiNote) - Discarding candidate $pendingMidi because already confirmed")
                 pendingMidi = null
                 pendingCount = 0
             }
@@ -226,86 +228,123 @@ class PianoBuddyBleManagerImpl @Inject constructor(
         if (midiNote == pendingMidi) {
             pendingCount++
         } else {
-            if (pendingMidi != null && BuildConfig.DEBUG) {
-                 Log.d(TAG, "Pending MIDI : $pendingMidi, New Detection : $midiNote, Action : Candidate Discarded")
-            }
             pendingMidi = midiNote
             pendingCount = 1
         }
 
-        if (BuildConfig.DEBUG) {
-            val action = if (pendingCount >= REQUIRED_CONFIRMATION_FRAMES) "Promoted" else "Waiting"
-            Log.d(TAG, """
-                Candidate State:
-                Detected MIDI : $midiNote
-                Pending MIDI  : $pendingMidi
-                Pending Count : $pendingCount / $REQUIRED_CONFIRMATION_FRAMES
-                Action        : $action
-            """.trimIndent())
-        }
-
         // Promotion Rule
         if (pendingCount >= REQUIRED_CONFIRMATION_FRAMES) {
-            val reason = if (lastSentMidi == null) "First Detection" else "Note Changed"
-            lastSentMidi = midiNote
+            val reason = if (lastSentFeedbackMidi == null) "First Detection" else "Note Changed"
             pendingMidi = null
             pendingCount = 0
-            performBleWrite(midiNote, frequency, "External Piano ($reason)")
+            
+            scope.launch {
+                performBleWriteWithRetry(midiNote, frequency, "External Piano ($reason)", isTarget = false)
+            }
         }
     }
 
     @SuppressLint("MissingPermission")
     override fun sendTargetNote(midiNote: Int, frequency: Float) {
-        // Apply same state-based logic for Guided Practice (instant, no debounce)
-        if (midiNote == lastSentMidi) return
+        scope.launch {
+            performBleWriteWithRetry(midiNote, frequency, "Guided Practice", isTarget = true)
+        }
+    }
 
-        val reason = if (lastSentMidi == null) "First Detection" else "Note Changed"
-        lastSentMidi = midiNote
+    private var blinkJob: Job? = null
 
-        performBleWrite(midiNote, frequency, "Guided Practice ($reason)")
+    override fun sendTargetNoteWithBlink(midiNote: Int, frequency: Float) {
+        Log.d("SongCoach_BLE", "Blink Requested for $midiNote")
+        blinkJob?.cancel()
+        blinkJob = scope.launch {
+            Log.d("SongCoach_BLE", "Blink Started for $midiNote")
+            performBleWriteWithRetry(-1, 0f, "Blink (OFF)", isTarget = true)
+            delay(150) // Increased delay for stability
+            performBleWriteWithRetry(midiNote, frequency, "Blink (ON)", isTarget = true)
+            Log.d("SongCoach_BLE", "Blink Completed for $midiNote")
+        }
+    }
+
+    private suspend fun performBleWriteWithRetry(midiNote: Int, frequency: Float, reason: String, isTarget: Boolean): Boolean {
+        return bleMutex.withLock {
+            val lastSent = if (isTarget) lastSentTargetMidi else lastSentFeedbackMidi
+            if (midiNote == lastSent && midiNote != -1) {
+                Log.d("SongCoach_BLE", "Any skipped BLE transmission: $midiNote. Reason: Already set (isTarget=$isTarget).")
+                return@withLock true
+            }
+
+            var success = false
+            repeat(3) { attempt ->
+                if (performBleWriteDirect(midiNote, frequency, "$reason (Attempt ${attempt + 1})", isTarget = isTarget)) {
+                    if (isTarget) {
+                        lastSentTargetMidi = if (midiNote == -1) -1 else midiNote
+                    } else {
+                        lastSentFeedbackMidi = if (midiNote == -1) -1 else midiNote
+                    }
+                    success = true
+                    return@withLock true
+                }
+                delay(50)
+            }
+            
+            Log.w("SongCoach_BLE", "Failed to send $midiNote after 3 attempts")
+            false
+        }
     }
 
     @SuppressLint("MissingPermission")
     private fun handleVirtualMidiNote(midiNote: Int) {
         if (midiNote == -1) {
-            lastSentMidi = null
+            lastSentFeedbackMidi = null
+            // For virtual silence, we send the polyphonic clear command
+            performBleWriteDirect(-1, 0f, "Virtual Piano / App Audio (Silence)", isTarget = false)
             return
         }
 
-        if (midiNote == lastSentMidi) return
+        if (midiNote == lastSentFeedbackMidi) return
         
-        lastSentMidi = midiNote
-        performBleWrite(midiNote, 0f, "Virtual Piano / App Audio")
+        lastSentFeedbackMidi = midiNote
+        performBleWriteDirect(midiNote, 0f, "Virtual Piano / App Audio", isTarget = false)
     }
 
     @SuppressLint("MissingPermission")
-    private fun performBleWrite(midiNote: Int, frequency: Float, reason: String) {
-        val gatt = bluetoothGatt ?: return
-        val service = gatt.getService(SERVICE_UUID) ?: return
-        val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID) ?: return
-        
-        val payload = byteArrayOf(midiNote.toByte())
-        characteristic.value = payload
-        gatt.writeCharacteristic(characteristic)
-
-        // Instrumentation Logging
-        if (BuildConfig.DEBUG) {
-            val note = com.pianoscales.learnmusic.theory.Note.entries[(midiNote % 12 + 12) % 12]
-            val octave = (midiNote / 12) - 1
-            Log.d(TAG, """
-                ========== PianoBuddy TX ==========
-                Reason      : $reason
-                Mode        : ${if (frequency > 0) "External Piano" else "Virtual Piano"}
-
-                Frequency   : ${if (frequency > 0) String.format(Locale.US, "%.2f Hz", frequency) else "N/A"}
-                Detected    : ${note.displayName}$octave
-                Octave      : $octave
-                MIDI        : $midiNote
-
-                BLE Payload : [${payload.joinToString { it.toString() }}]
-                ===================================
-            """.trimIndent())
+    private fun performBleWriteDirect(midiNote: Int, frequency: Float, reason: String, isTarget: Boolean): Boolean {
+        val gatt = bluetoothGatt
+        if (gatt == null) {
+            Log.w("SongCoach_BLE", "performBleWriteDirect($midiNote) - Failed: GATT null")
+            return false
         }
+        val service = gatt.getService(SERVICE_UUID)
+        if (service == null) {
+            Log.w("SongCoach_BLE", "performBleWriteDirect($midiNote) - Failed: Service null")
+            return false
+        }
+        val characteristic = service.getCharacteristic(CHARACTERISTIC_UUID)
+        if (characteristic == null) {
+            Log.w("SongCoach_BLE", "performBleWriteDirect($midiNote) - Failed: Characteristic null")
+            return false
+        }
+        
+        val payload = if (midiNote == -1) {
+            if (isTarget) byteArrayOf() else byteArrayOf(0xFE.toByte())
+        } else {
+            if (isTarget) byteArrayOf(midiNote.toByte())
+            else byteArrayOf(0xFE.toByte(), midiNote.toByte())
+        }
+        characteristic.value = payload
+        val success = gatt.writeCharacteristic(characteristic)
+        
+        if (success) {
+            if (midiNote == -1) {
+                Log.d("SongCoach_BLE", "BLE OFF sent ($reason, isTarget=$isTarget)")
+            } else {
+                Log.d("SongCoach_BLE", "BLE ON sent: $midiNote ($reason, isTarget=$isTarget)")
+            }
+        } else {
+            Log.w("SongCoach_BLE", "BLE Write Failed: $midiNote ($reason, isTarget=$isTarget)")
+        }
+        
+        return success
     }
 
     @SuppressLint("MissingPermission")
