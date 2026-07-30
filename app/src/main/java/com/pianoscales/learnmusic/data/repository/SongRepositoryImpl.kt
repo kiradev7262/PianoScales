@@ -31,7 +31,7 @@ class SongRepositoryImpl @Inject constructor(
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
 
     companion object {
-        private const val REMOTE_JSON_URL = "https://kiradev7262.github.io/PianoScales/songs_content.json"
+        private const val REMOTE_JSON_URL = "https://pianoscales.app/json/songs_content.json"
         private const val OFFLINE_ASSET_PATH = "songsContent.json"
     }
 
