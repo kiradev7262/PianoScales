@@ -159,26 +159,28 @@ fun PracticeTabContent(
 
         if (uiState.isListening) {
             VolumeMeter(amplitude = uiState.inputVolume)
-            Spacer(modifier = Modifier.height(16.dp))
             
-            // Phase 1: Diagnostic UI
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = CardSurface.copy(alpha = 0.5f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+            if (FeatureFlags.AUDIO_DIAGNOSTICS_ENABLED) {
+                Spacer(modifier = Modifier.height(16.dp))
+                // Phase 1: Diagnostic UI
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CardSurface.copy(alpha = 0.5f))
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Note: ${uiState.detectedNote?.displayName ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
-                        Text("Octave: ${uiState.detectedOctave ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
-                        Text("MIDI: ${uiState.detectedMidi ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
-                    }
-                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("Freq: ${String.format(Locale.US, "%.2f", uiState.detectedFrequency)} Hz", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
-                        Text("Conf: ${(uiState.detectionConfidence * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
-                        Text("Time: ${uiState.detectionTimestamp}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Note: ${uiState.detectedNote?.displayName ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("Octave: ${uiState.detectedOctave ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("MIDI: ${uiState.detectedMidi ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                        }
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Freq: ${String.format(Locale.US, "%.2f", uiState.detectedFrequency)} Hz", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("Conf: ${(uiState.detectionConfidence * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("Time: ${uiState.detectionTimestamp}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        }
                     }
                 }
             }
