@@ -64,10 +64,7 @@ fun SongComposerScreen(
             // Header
             ComposerHeader(
                 title = uiState.title,
-                onBack = { 
-                    if (uiState.isEditMode) onBack() 
-                    else viewModel.updateTitle(uiState.title) 
-                },
+                onBack = onBack,
                 onDeleteLastNote = { viewModel.deleteLastNote() },
                 onClearLine = { viewModel.clearLine() },
                 onDeleteLine = { viewModel.deleteLine() },

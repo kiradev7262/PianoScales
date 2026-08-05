@@ -30,6 +30,7 @@ import com.pianoscales.learnmusic.ui.components.PianoScalesDetailTopBar
 import com.pianoscales.learnmusic.ui.practice.components.*
 import com.pianoscales.learnmusic.ui.practice.components.WatchTabContent
 import com.pianoscales.learnmusic.ui.theme.*
+import com.pianoscales.learnmusic.util.FeatureFlags
 import com.pianoscales.learnmusic.util.rememberPermissionHandler
 import java.util.Locale
 
@@ -341,8 +342,10 @@ fun PracticeTabContent(
             onKeyClick = { viewModel.onKeyClick(it) }
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-        PianoBuddyStatus(connectionState = uiState.pianoBuddyConnectionState)
+        if (FeatureFlags.PIANO_BUDDY_ENABLED) {
+            Spacer(modifier = Modifier.height(8.dp))
+            PianoBuddyStatus(connectionState = uiState.pianoBuddyConnectionState)
+        }
         Spacer(modifier = Modifier.height(16.dp))
     }
 }

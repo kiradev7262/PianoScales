@@ -33,6 +33,7 @@ import com.pianoscales.learnmusic.ui.songs.SongsPackNavHost
 import com.pianoscales.learnmusic.ui.theme.CardSurface
 import com.pianoscales.learnmusic.ui.theme.PrimaryAccent
 import com.pianoscales.learnmusic.ui.theme.TextMuted
+import com.pianoscales.learnmusic.util.FeatureFlags
 
 val LocalBottomBarVisibility = compositionLocalOf<MutableState<Boolean>> {
     error("No BottomBarVisibility provided")
@@ -51,14 +52,16 @@ sealed class BottomNavScreen(val route: String, val label: String, val icon: Ima
 fun MainScreen() {
     val navController = rememberNavController()
     val bottomBarVisibility = remember { mutableStateOf(true) }
-    val items = listOf(
-        BottomNavScreen.Journey,
-        BottomNavScreen.Freestyle,
-        BottomNavScreen.AudioIntelligence,
-        BottomNavScreen.SongsPack,
-        BottomNavScreen.PianoBuddy,
-        BottomNavScreen.Me
-    )
+    val items = remember {
+        listOfNotNull(
+            BottomNavScreen.Journey,
+            BottomNavScreen.Freestyle,
+            BottomNavScreen.AudioIntelligence,
+            BottomNavScreen.SongsPack,
+            if (FeatureFlags.PIANO_BUDDY_ENABLED) BottomNavScreen.PianoBuddy else null,
+            BottomNavScreen.Me
+        )
+    }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -167,8 +170,10 @@ fun MainScreen() {
                         }
                     )
                 }
-                composable(BottomNavScreen.PianoBuddy.route) {
-                    PianoBuddyNavHost()
+                if (FeatureFlags.PIANO_BUDDY_ENABLED) {
+                    composable(BottomNavScreen.PianoBuddy.route) {
+                        PianoBuddyNavHost()
+                    }
                 }
             }
         }

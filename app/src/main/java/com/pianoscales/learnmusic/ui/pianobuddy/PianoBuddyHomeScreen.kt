@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -140,7 +139,6 @@ fun PianoBuddyHomeScreen(
                                         Text("1. Ensure your Piano Buddy (ESP32) is powered on.")
                                         Text("2. Make sure it's within 5-10 meters.")
                                         Text("3. Check if it's already connected to another device.")
-                                        Text("4. Use nRF Connect to verify the device is advertising.")
                                     }
                                 },
                                 confirmButton = {
@@ -240,22 +238,6 @@ fun PianoBuddyHomeScreen(
                     color = PrimaryAccent
                 )
             }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Debug Panel
-            val bluetoothManager = context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
-            DebugPanel(
-                state = connectionState,
-                devices = discoveredDevices,
-                isBluetoothEnabled = bluetoothManager.adapter?.isEnabled == true,
-                hasPermissions = permissionsToRequest.all {
-                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                }
-            )
-
-            // nRF Connect Helper
-            NRFConnectHelper { viewModel.openNRFConnect(context) }
         }
     }
 }
@@ -324,88 +306,3 @@ fun DeviceItem(device: BleDevice, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun DebugPanel(
-    state: BleConnectionState,
-    devices: List<BleDevice>,
-    isBluetoothEnabled: Boolean,
-    hasPermissions: Boolean
-) {
-    var showDebug by remember { mutableStateOf(false) }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Developer Debug",
-            style = MaterialTheme.typography.labelLarge,
-            color = TextMuted,
-            modifier = Modifier
-                .clickable { showDebug = !showDebug }
-                .padding(vertical = 4.dp)
-        )
-        
-        AnimatedVisibility(visible = showDebug) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .padding(12.dp)
-            ) {
-                DebugLine("Bluetooth Enabled", isBluetoothEnabled.toString())
-                DebugLine("Permissions Granted", hasPermissions.toString())
-                DebugLine("State", state.name)
-                DebugLine("Devices Found", devices.size.toString())
-                if (devices.isNotEmpty()) {
-                    DebugLine("Latest Device", devices.last().name ?: "Unknown")
-                    if (BuildConfig.DEBUG) {
-                        DebugLine("MAC", devices.last().address)
-                    }
-                    DebugLine("RSSI", devices.last().rssi.toString())
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun DebugLine(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = TextMuted)
-        Text(value, style = MaterialTheme.typography.labelSmall, color = PrimaryAccent)
-    }
-}
-
-@Composable
-fun NRFConnectHelper(onOpen: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Having trouble connecting?",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextMuted
-        )
-        Text(
-            text = "Install nRF Connect and verify that your ESP32 is advertising correctly.",
-            style = MaterialTheme.typography.labelSmall,
-            color = TextMuted.copy(alpha = 0.7f),
-            modifier = Modifier.padding(bottom = 8.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-        Button(
-            onClick = onOpen,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent,
-                contentColor = PrimaryAccent
-            ),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Open nRF Connect", fontSize = 14.sp)
-        }
-    }
-}
