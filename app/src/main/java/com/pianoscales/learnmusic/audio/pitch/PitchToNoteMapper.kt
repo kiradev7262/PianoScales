@@ -25,7 +25,7 @@ object PitchToNoteMapper {
         return NoteWithOctave(note, octave)
     }
 
-    private fun frequencyToMidi(frequency: Float): Int? {
+    fun frequencyToMidi(frequency: Float): Int? {
         if (frequency <= 0) return null
         val semitonesFromA4 = 12 * log2(frequency / 440.0)
         return (semitonesFromA4 + 69).roundToInt()

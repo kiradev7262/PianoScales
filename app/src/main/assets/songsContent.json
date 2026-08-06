@@ -17,7 +17,7 @@
     {
         "songId": "twinkle_twinkle",
         "title": "Twinkle Twinkle Little Star",
-        "description": "Play this timeless nursery rhyme.",
+        "description": "A classic nursery rhyme for beginners.",
         "difficulty": "Beginner",
         "available": true,
         "builtIn": false,
@@ -119,6 +119,527 @@
             ["F4", "G4", "F4", "G4", "F4", "G4", "F4", "D#4", "C#4"],
             ["C4"]
         ]
+    },
+    {
+        "songId": "death_note_theme",
+        "title": "Death Note Theme",
+        "description": "Play the iconic Death Note theme melody.",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            ["G5", "E5", "A5", "E5", "F#5", "G5", "E5"],
+            ["B5", "A5", "G5", "F#5", "E5", "D5"]
+        ]
+    },
+    {
+        "songId": "653f2ad7-ea59-4c37-92d2-c955be0164cd",
+        "title": "Hawa Hawa",
+        "description": "Play famous viral song",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            [
+                "E5",
+                "E5",
+                "C5",
+                "E5",
+                "E5",
+                "C5",
+                "E5"
+            ],
+            [
+                "D5",
+                "E5",
+                "C5",
+                "D5",
+                "C5",
+                "B4"
+            ],
+            [
+                "E5",
+                "E5",
+                "C5",
+                "E5",
+                "E5",
+                "C5",
+                "E5"
+            ],
+            [
+                "D5",
+                "E5",
+                "C5",
+                "D5",
+                "C5",
+                "B4"
+            ],
+            [
+                "G4",
+                "B4",
+                "B4",
+                "D5",
+                "C5",
+                "B4"
+            ],
+            [
+                "G4",
+                "B4",
+                "B4",
+                "D5",
+                "C5",
+                "B4"
+            ],
+            [
+                "G4",
+                "B4",
+                "B4",
+                "D5",
+                "C5",
+                "B4"
+            ],
+            [
+                "G4",
+                "B4",
+                "B4",
+                "D5",
+                "C5",
+                "B4"
+            ],
+            [
+                "C5",
+                "D5",
+                "D5",
+                "B4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "D5",
+                "B4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "D5",
+                "B4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "D5",
+                "B4",
+                "C5",
+                "B4",
+                "A4"
+            ]
+        ]
+    },
+    {
+        "songId": "d2a19f5b-022f-49a8-9b64-1a6fd890e254",
+        "title": "Hume Tumse Pyaar",
+        "description": "Hume Tumse Pyaar hai kitna ",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            [
+                "E4",
+                "F4",
+                "G4",
+                "G4",
+                "A4",
+                "A4",
+                "A4"
+            ],
+            [
+                "B4",
+                "B4",
+                "D5",
+                "B4",
+                "A4",
+                "G4",
+                "F#4",
+                "G4"
+            ],
+            [
+                "B4",
+                "A4",
+                "G4",
+                "E4",
+                "E4",
+                "F4",
+                "G4",
+                "E4",
+                "D4"
+            ],
+            [
+                "D4",
+                "G4",
+                "D4",
+                "F4",
+                "E4",
+                "G#4",
+                "A4"
+            ]
+        ]
+    },
+    {
+        "songId": "385323ce-f129-4918-8174-c52fc98654af",
+        "title": "Love Story",
+        "description": "Viral Instagram song",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            [
+                "E5",
+                "D5",
+                "A4"
+            ],
+            [
+                "A4",
+                "B4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "G4",
+                "E4",
+                "G4",
+                "B4",
+                "A4"
+            ],
+            [
+                "E5",
+                "D5",
+                "A4"
+            ],
+            [
+                "A4",
+                "B4",
+                "C5",
+                "B4",
+                "A4",
+                "G4",
+                "A4",
+                "B4"
+            ],
+            [
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "D5"
+            ],
+            [
+                "C5",
+                "B4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "D5"
+            ],
+            [
+                "C5",
+                "C5",
+                "C5",
+                "A4",
+                "C5"
+            ],
+            [
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "D5",
+                "B4"
+            ],
+            [
+                "C5",
+                "B4",
+                "C5",
+                "B4",
+                "A4",
+                "G4",
+                "A4"
+            ]
+        ]
+    },
+    {
+        "songId": "446b8269-fe2d-4afb-939a-a7aab3403154",
+        "title": "Chura Liya",
+        "description": "Chura Liya hai tumne",
+        "difficulty": "Beginner",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G4",
+                "D4"
+            ],
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G#4"
+            ],
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G4",
+                "D4"
+            ],
+            [
+                "A4",
+                "A4",
+                "C5",
+                "B4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A4",
+                "B4",
+                "A4",
+                "G#4"
+            ]
+        ]
+    },
+    {
+        "songId": "eabe21fd-c57d-45f6-9729-f90922566c14",
+        "title": "Yeda Yung",
+        "description": "Yeda Yung",
+        "difficulty": "Intermediate",
+        "available": true,
+        "builtIn": false,
+        "version": 1,
+        "lines": [
+            [
+                "D4",
+                "D#4",
+                "F4",
+                "G4",
+                "A#4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A#4",
+                "C5",
+                "D5",
+                "D#5",
+                "D5"
+            ],
+            [
+                "D#5",
+                "D5",
+                "D#5",
+                "D5",
+                "A4"
+            ],
+            [
+                "A#4",
+                "A4",
+                "A#4",
+                "A4",
+                "D4"
+            ],
+            [
+                "D#4",
+                "D4",
+                "D#4",
+                "D4",
+                "C4",
+                "D#4",
+                "D4"
+            ],
+            [
+                "D4",
+                "D#4",
+                "F4",
+                "G4",
+                "A#4",
+                "A4"
+            ],
+            [
+                "A4",
+                "A#4",
+                "C5",
+                "D5",
+                "D#5",
+                "D5"
+            ],
+            [
+                "D#5",
+                "D5",
+                "D#5",
+                "D5",
+                "A4"
+            ],
+            [
+                "A#4",
+                "A4",
+                "A#4",
+                "A4",
+                "D4"
+            ],
+            [
+                "D#4",
+                "D4",
+                "D#4",
+                "D4",
+                "C4",
+                "D#4",
+                "D4"
+            ],
+            [
+                "D4",
+                "D4",
+                "D4",
+                "D#4",
+                "D#4"
+            ],
+            [
+                "C4",
+                "C4",
+                "C4",
+                "D4",
+                "D4"
+            ],
+            [
+                "D4",
+                "D4",
+                "D4",
+                "D#4",
+                "D#4"
+            ],
+            [
+                "C4",
+                "C4",
+                "C4",
+                "D4",
+                "D4",
+                "D4"
+            ]
+        ]
+    },
+    {
+        "songId": "7ef17215-9541-4530-9f68-05c85c9cbc53",
+        "title": "clap ur hands ",
+        "description": "Custom song created on 18 Jul 2026",
+        "difficulty": "Custom",
+        "available": true,
+        "builtIn": false,
+        "version": 2,
+        "createdAt": 1784356958141,
+        "modifiedAt": 1784356958141,
+        "lines": [
+            [
+                "G4",
+                "G4",
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "C5",
+                "B4",
+                "C5",
+                "D5"
+            ],
+            [
+                "G4",
+                "G4",
+                "D5",
+                "D5",
+                "D5",
+                "D5",
+                "D5",
+                "D5",
+                "C5",
+                "D5",
+                "E5"
+            ],
+            [
+                "E5",
+                "E5",
+                "F5",
+                "F5",
+                "F5",
+                "F5",
+                "A4",
+                "A4",
+                "F5",
+                "F5",
+                "E5",
+                "E5",
+                "E5",
+                "D5",
+                "C5",
+                "C5"
+            ],
+            [
+                "E5",
+                "E5",
+                "D5",
+                "D5",
+                "D5",
+                "C5",
+                "B4",
+                "B4",
+                "A4",
+                "B4",
+                "C5"
+            ]
+        ]
     }
+
+
 
 ]

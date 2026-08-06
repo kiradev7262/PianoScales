@@ -3,10 +3,10 @@ package com.pianoscales.learnmusic.ui.freestyle
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
@@ -28,8 +29,6 @@ import com.pianoscales.learnmusic.ui.components.PianoScalesHomeTopBar
 import com.pianoscales.learnmusic.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-data class PianoKey(val note: Note, val octave: Int)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,10 +128,13 @@ fun FreestyleScreen(
 
 @Composable
 fun FreestylePiano(
-    onNoteClick: (Note, Int) -> Unit,
+    onNoteClick: (com.pianoscales.learnmusic.theory.Note, Int) -> Unit = { _, _ -> },
+    onNoteDown: (com.pianoscales.learnmusic.theory.Note, Int, Long) -> Unit = { _, _, _ -> },
+    onNoteUp: (Long) -> Unit = { _ -> },
     height: androidx.compose.ui.unit.Dp = 240.dp,
     blackKeyHeightRatio: Float = 0.55f,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    octaves: List<Int> = listOf(3, 4, 5, 6, 7)
 ) {
     val scrollState = rememberScrollState()
     val activeHighlights = remember { mutableStateMapOf<String, Boolean>() }
@@ -141,7 +143,6 @@ fun FreestylePiano(
     val blackKeyWidth = whiteKeyWidth * 0.65f
     val blackKeyHeight = height * blackKeyHeightRatio
     
-    val octaves = listOf(3, 4, 5, 6, 7)
     val whiteNotesPerOctave = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
     val blackKeyOffsets = listOf(
         Note.C_SHARP to 1f,
@@ -173,14 +174,16 @@ fun FreestylePiano(
                         note = note,
                         octave = octave,
                         isHighlighted = activeHighlights[keyId] == true,
-                        onDown = { 
+                        onDown = { pointerId ->
                             if (enabled) {
                                 activeHighlights[keyId] = true
                                 onNoteClick(note, octave)
+                                onNoteDown(note, octave, pointerId)
                             }
                         },
-                        onUp = {
+                        onUp = { pointerId ->
                             activeHighlights[keyId] = false
+                            onNoteUp(pointerId)
                         },
                         modifier = Modifier
                             .width(whiteKeyWidth)
@@ -200,14 +203,16 @@ fun FreestylePiano(
                     note = note,
                     octave = octave,
                     isHighlighted = activeHighlights[keyId] == true,
-                    onDown = { 
+                    onDown = { pointerId ->
                         if (enabled) {
                             activeHighlights[keyId] = true
                             onNoteClick(note, octave)
+                            onNoteDown(note, octave, pointerId)
                         }
                     },
-                    onUp = {
+                    onUp = { pointerId ->
                         activeHighlights[keyId] = false
+                        onNoteUp(pointerId)
                     },
                     modifier = Modifier
                         .offset(x = overallOffset)
@@ -221,11 +226,11 @@ fun FreestylePiano(
 
 @Composable
 private fun WhiteKey(
-    note: Note,
+    note: com.pianoscales.learnmusic.theory.Note,
     octave: Int,
     isHighlighted: Boolean,
-    onDown: () -> Unit,
-    onUp: () -> Unit,
+    onDown: (Long) -> Unit,
+    onUp: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -234,16 +239,21 @@ private fun WhiteKey(
             .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
             .background(if (isHighlighted) PrimaryAccent else Color.White)
             .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        onDown()
+                awaitPointerEventScope {
+                    while (true) {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val pointerId = down.id.value
+                        onDown(pointerId)
                         try {
-                            awaitRelease()
+                            // Wait for THIS SPECIFIC pointer to go up
+                            do {
+                                val event = awaitPointerEvent()
+                            } while (event.changes.any { it.id.value == pointerId && it.pressed })
                         } finally {
-                            onUp()
+                            onUp(pointerId)
                         }
                     }
-                )
+                }
             }
             .border(0.5.dp, if (isHighlighted) PrimaryAccent else Color(0xFFE2E8F0), RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp)),
         contentAlignment = Alignment.BottomCenter
@@ -260,11 +270,11 @@ private fun WhiteKey(
 
 @Composable
 private fun BlackKey(
-    note: Note,
+    note: com.pianoscales.learnmusic.theory.Note,
     octave: Int,
     isHighlighted: Boolean,
-    onDown: () -> Unit,
-    onUp: () -> Unit,
+    onDown: (Long) -> Unit,
+    onUp: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -272,16 +282,21 @@ private fun BlackKey(
             .clip(RoundedCornerShape(bottomStart = 6.dp, bottomEnd = 6.dp))
             .background(if (isHighlighted) PrimaryAccent else Color(0xFF0F172A))
             .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        onDown()
+                awaitPointerEventScope {
+                    while (true) {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val pointerId = down.id.value
+                        onDown(pointerId)
                         try {
-                            awaitRelease()
+                            // Wait for THIS SPECIFIC pointer to go up
+                            do {
+                                val event = awaitPointerEvent()
+                            } while (event.changes.any { it.id.value == pointerId && it.pressed })
                         } finally {
-                            onUp()
+                            onUp(pointerId)
                         }
                     }
-                )
+                }
             },
         contentAlignment = Alignment.BottomCenter
     ) {

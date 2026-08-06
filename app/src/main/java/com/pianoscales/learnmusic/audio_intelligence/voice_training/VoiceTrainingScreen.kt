@@ -26,6 +26,7 @@ import com.pianoscales.learnmusic.ui.theme.PrimaryAccent
 import com.pianoscales.learnmusic.ui.theme.PrimaryBackground
 import com.pianoscales.learnmusic.ui.theme.TextMuted
 import com.pianoscales.learnmusic.ui.theme.TextPrimary
+import com.pianoscales.learnmusic.util.FeatureFlags
 import com.pianoscales.learnmusic.util.rememberPermissionHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -231,8 +232,10 @@ fun FreePitchDetectionScreen(viewModel: VoiceTrainingViewModel) {
             }
         } else {
             NoteDisplay(detectedNote, isStable)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = String.format(Locale.getDefault(), "%.1f Hz", frequency), color = TextMuted)
+            if (FeatureFlags.AUDIO_DIAGNOSTICS_ENABLED) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = String.format(Locale.getDefault(), "%.1f Hz", frequency), color = TextMuted)
+            }
             
             Spacer(modifier = Modifier.height(32.dp))
             Button(onClick = { viewModel.stopListening() }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {

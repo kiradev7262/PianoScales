@@ -8,22 +8,26 @@ plugins {
 
 android {
     namespace = "com.pianoscales.learnmusic"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pianoscales.learnmusic"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        targetSdk = 36
+        versionCode = 4
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+        buildConfigField("boolean", "EXPORT_IMPORT_ENABLED", "false")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("boolean", "EXPORT_IMPORT_ENABLED", "true")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -43,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -61,6 +66,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.material)
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.navigation.compose)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)

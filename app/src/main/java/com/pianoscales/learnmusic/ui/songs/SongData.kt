@@ -8,7 +8,10 @@ data class Song(
     val description: String,
     val difficulty: String,
     val version: Int,
-    val lines: List<SongLine>
+    val lines: List<SongLine>,
+    val builtIn: Boolean = false,
+    val createdAt: Long = 0L,
+    val modifiedAt: Long = 0L
 )
 
 data class SongLine(
@@ -17,7 +20,8 @@ data class SongLine(
 
 data class NoteWithOctave(
     val note: Note,
-    val octave: Int
+    val octave: Int,
+    val timestamp: Long? = null
 )
 
 enum class PianoMode {

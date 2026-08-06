@@ -10,13 +10,19 @@ import com.pianoscales.learnmusic.domain.video.VideoRepository
 import com.pianoscales.learnmusic.theory.ConceptType
 import com.pianoscales.learnmusic.theory.Note
 import com.pianoscales.learnmusic.theory.TheoryExplanation
+import com.pianoscales.learnmusic.theory.fingering.FingerInfo
 import com.pianoscales.learnmusic.theory.fingering.FingeringGuide
 import com.pianoscales.learnmusic.theory.fingering.Hand
 import com.pianoscales.learnmusic.theory.generators.TheoryEngine
+import com.pianoscales.learnmusic.ble.BleConnectionState
+import com.pianoscales.learnmusic.ble.PianoBuddyBleManager
+import com.pianoscales.learnmusic.domain.profile.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,6 +38,10 @@ data class PracticeUiState(
     val isListening: Boolean = false,
     val detectedNote: Note? = null,
     val detectedFrequency: Float = 0f,
+    val detectedMidi: Int? = null,
+    val detectedOctave: Int? = null,
+    val detectionConfidence: Float = 0f,
+    val detectionTimestamp: Long = 0L,
     val isStablePitch: Boolean = false,
     val inputVolume: Float = 0f,
     val isAudioLoaded: Boolean = false,
@@ -44,10 +54,30 @@ data class PracticeUiState(
     val videoMetadata: VideoMetadata? = null,
     val isLessonAlreadyCompleted: Boolean = false,
     val showFirstTimeCompletion: Boolean = false,
-    val pendingActionAfterPermission: (() -> Unit)? = null
+    val isAscendingDescendingMode: Boolean = false,
+    val pendingActionAfterPermission: (() -> Unit)? = null,
+    val pianoBuddyConnectionState: BleConnectionState = BleConnectionState.IDLE
 ) {
     fun getCurrentFingeringGuide(): FingeringGuide? {
         return theoryExplanation?.fingeringGuides?.find { it.hand == selectedHand }
+    }
+
+    fun getGuidedPracticeNotes(): List<Note> {
+        if (generatedNotes.isEmpty()) return emptyList()
+        if (!isAscendingDescendingMode) return generatedNotes
+
+        val descending = generatedNotes.reversed().drop(1)
+        return generatedNotes + descending
+    }
+
+    fun getGuidedPracticeFingering(): List<FingerInfo?> {
+        val baseFingering: List<FingerInfo?> = getCurrentFingeringGuide()?.steps?.map { it.finger }
+            ?: List(generatedNotes.size) { null }
+
+        if (!isAscendingDescendingMode) return baseFingering
+
+        val descending = baseFingering.reversed().drop(1)
+        return baseFingering + descending
     }
 }
 
@@ -57,7 +87,8 @@ class PracticeViewModel @Inject constructor(
     private val pitchDetector: PitchDetector,
     private val progressRepository: ProgressRepository,
     private val videoRepository: VideoRepository,
-    private val profileRepository: com.pianoscales.learnmusic.domain.profile.ProfileRepository
+    private val profileRepository: ProfileRepository,
+    private val pianoBuddyManager: PianoBuddyBleManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PracticeUiState())
@@ -72,6 +103,48 @@ class PracticeViewModel @Inject constructor(
             notePlayer.isLoaded.collect { loaded ->
                 _uiState.update { it.copy(isAudioLoaded = loaded) }
             }
+        }
+        viewModelScope.launch {
+            pianoBuddyManager.connectionState.collectLatest { state ->
+                _uiState.update { it.copy(pianoBuddyConnectionState = state) }
+            }
+        }
+    }
+
+    private fun getMidiNoteForIndex(index: Int): Int {
+        val notes = _uiState.value.getGuidedPracticeNotes()
+        if (index < 0 || index >= notes.size) return -1
+
+        var currentOctave = 4
+        var lastNoteOrdinal = -1
+        val ascendingSize = _uiState.value.generatedNotes.size
+
+        for (i in 0..index) {
+            val note = notes[i]
+            if (i > 0) {
+                if (i < ascendingSize) {
+                    // Ascending portion
+                    if (note.ordinal <= lastNoteOrdinal) {
+                        currentOctave++
+                    }
+                } else {
+                    // Descending portion
+                    if (note.ordinal >= lastNoteOrdinal) {
+                        currentOctave--
+                    }
+                }
+            }
+            lastNoteOrdinal = note.ordinal
+            if (i == index) {
+                return (currentOctave + 1) * 12 + note.ordinal
+            }
+        }
+        return -1
+    }
+
+    private fun sendTargetNoteToPianoBuddy(midiNote: Int, frequency: Float = 0f) {
+        if (_uiState.value.pianoBuddyConnectionState == BleConnectionState.CONNECTED) {
+            pianoBuddyManager.sendTargetNote(midiNote, frequency)
         }
     }
 
@@ -140,25 +213,42 @@ class PracticeViewModel @Inject constructor(
         _uiState.update { it.copy(isTheoryExpanded = !it.isTheoryExpanded) }
     }
 
+    fun toggleAscendingDescendingMode() {
+        _uiState.update { it.copy(isAscendingDescendingMode = !it.isAscendingDescendingMode) }
+    }
+
     fun playSequence() {
         if (_uiState.value.isPlaying || _uiState.value.isListening || !_uiState.value.isAudioLoaded) return
+
+        val guidedNotes = _uiState.value.getGuidedPracticeNotes()
+        if (guidedNotes.isEmpty()) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isPlaying = true) }
             profileRepository.updateStreak()
-            notePlayer.playSequence(
-                notes = _uiState.value.generatedNotes,
-                onNoteStarted = { index, note, octave ->
-                    lastVirtualKeyPressTime = System.currentTimeMillis()
-                    _uiState.update { 
-                        it.copy(
-                            currentPlayingNote = note,
-                            currentPlayingIndex = index,
-                            currentPlayingOctave = octave
-                        ) 
-                    }
+
+            // We play the notes one by one to ensure correct octave handling for descending mode
+            guidedNotes.forEachIndexed { index, note ->
+                if (!_uiState.value.isPlaying) return@forEachIndexed
+
+                val midiNote = getMidiNoteForIndex(index)
+                val octave = (midiNote / 12) - 1
+
+                lastVirtualKeyPressTime = System.currentTimeMillis()
+                _uiState.update {
+                    it.copy(
+                        currentPlayingNote = note,
+                        currentPlayingIndex = index,
+                        currentPlayingOctave = octave
+                    )
                 }
-            )
+
+                sendTargetNoteToPianoBuddy(midiNote, 0f)
+                notePlayer.playNote(note, octave)
+
+                kotlinx.coroutines.delay(500)
+            }
+
             _uiState.update { it.copy(isPlaying = false, currentPlayingNote = null, currentPlayingIndex = -1) }
         }
     }
@@ -192,11 +282,20 @@ class PracticeViewModel @Inject constructor(
             ) 
         }
         listeningJob = viewModelScope.launch {
-            pitchDetector.startListening { note, frequency, volume, isStable ->
-                _uiState.update { it.copy(detectedFrequency = frequency, inputVolume = volume) }
-                if (isStable && note != null) {
-                    evaluateNote(note, isStable)
-                } else if (!isStable) {
+            pitchDetector.startListening { result ->
+                _uiState.update {
+                    it.copy(
+                        detectedFrequency = result.frequency,
+                        inputVolume = result.amplitude,
+                        detectedMidi = result.midi,
+                        detectedOctave = result.octave,
+                        detectionConfidence = result.confidence,
+                        detectionTimestamp = result.timestamp
+                    )
+                }
+                if (result.isStable && result.note != null) {
+                    evaluateNote(result.note, result.isStable)
+                } else if (!result.isStable) {
                     // Reset evaluation when pitch becomes unstable
                     _uiState.update { currentState ->
                         currentState.copy(
@@ -242,6 +341,8 @@ class PracticeViewModel @Inject constructor(
             return
         }
 
+        var guidedNote: Int? = null
+
         _uiState.update { currentState ->
             var newCompletedNotes = currentState.completedNotes
             var newGuidedPractice = currentState.guidedPractice
@@ -254,17 +355,19 @@ class PracticeViewModel @Inject constructor(
                     if (target != null) {
                         if (note == target) {
                             // Correct note
+                            val guidedNotes = currentState.getGuidedPracticeNotes()
+                            val guidedFingering = currentState.getGuidedPracticeFingering()
+
                             val nextIndex = currentState.guidedPractice.currentIndex + 1
-                            val isCompleted = nextIndex >= currentState.generatedNotes.size
-                            val fingeringGuide = currentState.getCurrentFingeringGuide()
+                            val isCompleted = nextIndex >= guidedNotes.size
 
                             newGuidedPractice = currentState.guidedPractice.copy(
                                 currentIndex = nextIndex,
-                                targetNote = if (isCompleted) null else currentState.generatedNotes.getOrNull(nextIndex),
-                                targetFinger = if (isCompleted) null else fingeringGuide?.steps?.getOrNull(nextIndex)?.finger,
+                                targetNote = if (isCompleted) null else guidedNotes.getOrNull(nextIndex),
+                                targetFinger = if (isCompleted) null else guidedFingering.getOrNull(nextIndex),
                                 completedNotes = currentState.guidedPractice.completedNotes + currentState.guidedPractice.currentIndex,
                                 lessonCompleted = isCompleted,
-                                lastResult = PracticeResult.Correct(fingeringGuide?.steps?.getOrNull(currentState.guidedPractice.currentIndex)?.finger),
+                                lastResult = PracticeResult.Correct(guidedFingering.getOrNull(currentState.guidedPractice.currentIndex)),
                                 lastEvaluatedNote = note
                             )
 
@@ -275,6 +378,9 @@ class PracticeViewModel @Inject constructor(
 
                             if (isCompleted) {
                                 onLessonCompleted(currentState.rootNote, currentState.conceptType)
+                            } else {
+                                val current = getMidiNoteForIndex(nextIndex)
+                                guidedNote = current
                             }
                         } else {
                             // Incorrect note - do NOT advance, do NOT add to completed notes
@@ -299,18 +405,21 @@ class PracticeViewModel @Inject constructor(
                 guidedPractice = newGuidedPractice
             )
         }
+
+        guidedNote?.let { n -> sendTargetNoteToPianoBuddy(n) }
     }
 
     fun startGuidedPractice() {
         _uiState.update { 
-            if (it.generatedNotes.isEmpty()) return@update it
-            val fingeringGuide = it.getCurrentFingeringGuide()
+            val guidedNotes = it.getGuidedPracticeNotes()
+            if (guidedNotes.isEmpty()) return@update it
+            val guidedFingering = it.getGuidedPracticeFingering()
             it.copy(
                 guidedPractice = GuidedPracticeState(
                     isRunning = true,
                     currentIndex = 0,
-                    targetNote = it.generatedNotes[0],
-                    targetFinger = fingeringGuide?.steps?.getOrNull(0)?.finger,
+                    targetNote = guidedNotes[0],
+                    targetFinger = guidedFingering.getOrNull(0),
                     completedNotes = emptySet(),
                     lessonCompleted = false,
                     lastResult = null,
@@ -318,6 +427,8 @@ class PracticeViewModel @Inject constructor(
                 )
             )
         }
+        val currentMidi = getMidiNoteForIndex(0)
+        sendTargetNoteToPianoBuddy(currentMidi)
     }
 
     fun startGuidedPracticeWithPermission() {
@@ -341,28 +452,16 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun playTargetNote() {
-        val target = _uiState.value.guidedPractice.targetNote
         val currentIndex = _uiState.value.guidedPractice.currentIndex
-        val notes = _uiState.value.generatedNotes
-        
-        if (target != null) {
-            var octave = 4
-            // Calculate octave if target is part of the current scale at the current index
-            if (currentIndex < notes.size && notes[currentIndex] == target) {
-                var lastNoteOrdinal = -1
-                var currentOctave = 4
-                for (i in 0..currentIndex) {
-                    val note = notes[i]
-                    if (i > 0 && note.ordinal <= lastNoteOrdinal) {
-                        currentOctave++
-                    }
-                    lastNoteOrdinal = note.ordinal
-                }
-                octave = currentOctave
-            }
-            
+        val midiNote = getMidiNoteForIndex(currentIndex)
+
+        if (midiNote != -1) {
+            val target = _uiState.value.guidedPractice.targetNote ?: return
+            val octave = (midiNote / 12) - 1
+
             lastVirtualKeyPressTime = System.currentTimeMillis()
             notePlayer.playNote(target, octave)
+            sendTargetNoteToPianoBuddy(midiNote)
         }
     }
 

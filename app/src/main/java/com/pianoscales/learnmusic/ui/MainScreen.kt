@@ -1,10 +1,12 @@
 package com.pianoscales.learnmusic.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
@@ -14,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -25,29 +28,40 @@ import com.pianoscales.learnmusic.audio_intelligence.AudioIntelligenceNavHost
 import com.pianoscales.learnmusic.navigation.JourneyNavHost
 import com.pianoscales.learnmusic.ui.freestyle.FreestyleScreen
 import com.pianoscales.learnmusic.ui.me.MeNavHost
+import com.pianoscales.learnmusic.ui.pianobuddy.PianoBuddyNavHost
 import com.pianoscales.learnmusic.ui.songs.SongsPackNavHost
 import com.pianoscales.learnmusic.ui.theme.CardSurface
 import com.pianoscales.learnmusic.ui.theme.PrimaryAccent
 import com.pianoscales.learnmusic.ui.theme.TextMuted
+import com.pianoscales.learnmusic.util.FeatureFlags
+
+val LocalBottomBarVisibility = compositionLocalOf<MutableState<Boolean>> {
+    error("No BottomBarVisibility provided")
+}
 
 sealed class BottomNavScreen(val route: String, val label: String, val icon: ImageVector) {
     object Journey : BottomNavScreen("journey_root", "Journey", Icons.Default.Home)
     object Freestyle : BottomNavScreen("freestyle_root", "Freestyle", Icons.Default.PlayArrow)
     object AudioIntelligence : BottomNavScreen("audio_intelligence_root", "Audio AI", Icons.Default.Star)
     object SongsPack : BottomNavScreen("songs_pack_root", "Songs", Icons.AutoMirrored.Filled.List)
+    object PianoBuddy : BottomNavScreen("piano_buddy_root", "Buddy", Icons.Default.Info)
     object Me : BottomNavScreen("me_root", "Me", Icons.Default.Person)
 }
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
-    val items = listOf(
-        BottomNavScreen.Journey,
-        BottomNavScreen.Freestyle,
-        BottomNavScreen.AudioIntelligence,
-        BottomNavScreen.SongsPack,
-        BottomNavScreen.Me
-    )
+    val bottomBarVisibility = remember { mutableStateOf(true) }
+    val items = remember {
+        listOfNotNull(
+            BottomNavScreen.Journey,
+            BottomNavScreen.Freestyle,
+            BottomNavScreen.AudioIntelligence,
+            BottomNavScreen.SongsPack,
+            if (FeatureFlags.PIANO_BUDDY_ENABLED) BottomNavScreen.PianoBuddy else null,
+            BottomNavScreen.Me
+        )
+    }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -55,100 +69,112 @@ fun MainScreen() {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isFreestyle = currentDestination?.hierarchy?.any { it.route == BottomNavScreen.Freestyle.route } == true
     val isSongsPack = currentDestination?.hierarchy?.any { it.route == BottomNavScreen.SongsPack.route } == true
-    val showBottomBar = !(isLandscape && (isFreestyle || isSongsPack))
+    val showBottomBar = bottomBarVisibility.value && !(isLandscape && (isFreestyle || isSongsPack))
 
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(
-                    containerColor = CardSurface,
-                    contentColor = PrimaryAccent
-                ) {
-                    items.forEach { screen ->
-                        NavigationBarItem(
-                            icon = { Icon(screen.icon, contentDescription = null) },
-                            label = { Text(screen.label) },
-                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+    CompositionLocalProvider(LocalBottomBarVisibility provides bottomBarVisibility) {
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    NavigationBar(
+                        containerColor = CardSurface,
+                        contentColor = PrimaryAccent
+                    ) {
+                        items.forEach { screen ->
+                            NavigationBarItem(
+                                icon = { Icon(screen.icon, contentDescription = null) },
+                                label = {
+                                    Text(
+                                        text = screen.label,
+                                        fontSize = 10.8.sp
+                                    )
+                                },
+                                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = PrimaryAccent,
-                                selectedTextColor = PrimaryAccent,
-                                unselectedIconColor = TextMuted,
-                                unselectedTextColor = TextMuted,
-                                indicatorColor = PrimaryAccent.copy(alpha = 0.1f)
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = PrimaryAccent,
+                                    selectedTextColor = PrimaryAccent,
+                                    unselectedIconColor = TextMuted,
+                                    unselectedTextColor = TextMuted,
+                                    indicatorColor = PrimaryAccent.copy(alpha = 0.1f)
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = BottomNavScreen.Journey.route,
-            modifier = Modifier.padding(
-                bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else 0.dp
-            )
-        ) {
-            composable(
-                route = BottomNavScreen.Journey.route + "?subRoute={subRoute}",
-                arguments = listOf(navArgument("subRoute") { nullable = true; defaultValue = null })
-            ) { backStackEntry ->
-                val subRoute = backStackEntry.arguments?.getString("subRoute")
-                JourneyNavHost(initialSubRoute = subRoute)
-            }
-            composable(BottomNavScreen.Freestyle.route) {
-                FreestyleScreen()
-            }
-            composable(BottomNavScreen.AudioIntelligence.route + "?subRoute={subRoute}") { backStackEntry ->
-                val subRoute = backStackEntry.arguments?.getString("subRoute")
-                AudioIntelligenceNavHost(initialSubRoute = subRoute)
-            }
-            composable(BottomNavScreen.SongsPack.route) {
-                SongsPackNavHost()
-            }
-            composable(BottomNavScreen.Me.route) {
-                MeNavHost(
-                    onNavigateToJourney = { subRoute -> 
-                        val route = if (subRoute != null) {
-                            "${BottomNavScreen.Journey.route}?subRoute=$subRoute"
-                        } else {
-                            BottomNavScreen.Journey.route
-                        }
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = (subRoute == null)
-                        }
-                    },
-                    onNavigateToFreestyle = {
-                        navController.navigate(BottomNavScreen.Freestyle.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToAudioAI = { subRoute ->
-                        val route = if (subRoute != null) {
-                            "${BottomNavScreen.AudioIntelligence.route}?subRoute=$subRoute"
-                        } else {
-                            BottomNavScreen.AudioIntelligence.route
-                        }
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = (subRoute == null)
-                        }
-                    }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = BottomNavScreen.Journey.route,
+                modifier = Modifier.padding(innerPadding)
+                    .consumeWindowInsets(innerPadding
                 )
+            ) {
+                composable(
+                    route = BottomNavScreen.Journey.route + "?subRoute={subRoute}",
+                    arguments = listOf(navArgument("subRoute") { nullable = true; defaultValue = null })
+                ) { backStackEntry ->
+                    val subRoute = backStackEntry.arguments?.getString("subRoute")
+                    JourneyNavHost(initialSubRoute = subRoute)
+                }
+                composable(BottomNavScreen.Freestyle.route) {
+                    FreestyleScreen()
+                }
+                composable(BottomNavScreen.AudioIntelligence.route + "?subRoute={subRoute}") { backStackEntry ->
+                    val subRoute = backStackEntry.arguments?.getString("subRoute")
+                    AudioIntelligenceNavHost(initialSubRoute = subRoute)
+                }
+                composable(BottomNavScreen.SongsPack.route) {
+                    SongsPackNavHost()
+                }
+                composable(BottomNavScreen.Me.route) {
+                    MeNavHost(
+                        onNavigateToJourney = { subRoute ->
+                            val route = if (subRoute != null) {
+                                "${BottomNavScreen.Journey.route}?subRoute=$subRoute"
+                            } else {
+                                BottomNavScreen.Journey.route
+                            }
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = (subRoute == null)
+                            }
+                        },
+                        onNavigateToFreestyle = {
+                            navController.navigate(BottomNavScreen.Freestyle.route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        onNavigateToAudioAI = { subRoute ->
+                            val route = if (subRoute != null) {
+                                "${BottomNavScreen.AudioIntelligence.route}?subRoute=$subRoute"
+                            } else {
+                                BottomNavScreen.AudioIntelligence.route
+                            }
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = (subRoute == null)
+                            }
+                        }
+                    )
+                }
+                if (FeatureFlags.PIANO_BUDDY_ENABLED) {
+                    composable(BottomNavScreen.PianoBuddy.route) {
+                        PianoBuddyNavHost()
+                    }
+                }
             }
         }
     }

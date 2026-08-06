@@ -23,13 +23,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pianoscales.learnmusic.ble.BleConnectionState
 import com.pianoscales.learnmusic.theory.ConceptType
 import com.pianoscales.learnmusic.theory.Note
 import com.pianoscales.learnmusic.ui.components.PianoScalesDetailTopBar
 import com.pianoscales.learnmusic.ui.practice.components.*
 import com.pianoscales.learnmusic.ui.practice.components.WatchTabContent
 import com.pianoscales.learnmusic.ui.theme.*
+import com.pianoscales.learnmusic.util.FeatureFlags
 import com.pianoscales.learnmusic.util.rememberPermissionHandler
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,6 +137,9 @@ fun PracticeTabContent(
 ) {
     val context = LocalContext.current
     
+    val guidedNotes = uiState.getGuidedPracticeNotes()
+    val guidedFingering = uiState.getGuidedPracticeFingering()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -144,7 +150,7 @@ fun PracticeTabContent(
             lessonName = "${uiState.rootNote.displayName} ${uiState.conceptType.displayName}",
             completedNotes = if (uiState.guidedPractice.isRunning) uiState.guidedPractice.completedNotes.size
                             else uiState.completedNotes.size,
-            totalNotes = uiState.generatedNotes.size,
+            totalNotes = guidedNotes.size,
             formula = uiState.theoryExplanation?.formula ?: "--"
         )
 
@@ -153,6 +159,31 @@ fun PracticeTabContent(
 
         if (uiState.isListening) {
             VolumeMeter(amplitude = uiState.inputVolume)
+            
+            if (FeatureFlags.AUDIO_DIAGNOSTICS_ENABLED) {
+                Spacer(modifier = Modifier.height(16.dp))
+                // Phase 1: Diagnostic UI
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CardSurface.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Note: ${uiState.detectedNote?.displayName ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("Octave: ${uiState.detectedOctave ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("MIDI: ${uiState.detectedMidi ?: "--"}", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                        }
+                        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Freq: ${String.format(Locale.US, "%.2f", uiState.detectedFrequency)} Hz", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("Conf: ${(uiState.detectionConfidence * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = TextPrimary)
+                            Text("Time: ${uiState.detectionTimestamp}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        }
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -198,7 +229,6 @@ fun PracticeTabContent(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        val fingeringGuide = uiState.getCurrentFingeringGuide()
         val lazyListState = rememberLazyListState()
 
         // Auto-scroll logic
@@ -212,23 +242,28 @@ fun PracticeTabContent(
             }
 
             val indexToScroll = if (rawIndex != -1) {
-                rawIndex.coerceAtMost(uiState.generatedNotes.size - 1)
+                rawIndex.coerceAtMost(guidedNotes.size - 1)
             } else {
                 -1
             }
 
             if (indexToScroll != -1) {
-                val activeNote = uiState.generatedNotes.getOrNull(indexToScroll)
+                val activeNote = guidedNotes.getOrNull(indexToScroll)
                 val octave = if (uiState.isPlaying) {
                     uiState.currentPlayingOctave
                 } else {
                     // Calculate octave for guided practice
                     var lastNoteOrdinal = -1
                     var currentOctave = 4
+                    val ascendingSize = uiState.generatedNotes.size
                     for (i in 0..indexToScroll) {
-                        val note = uiState.generatedNotes.getOrNull(i) ?: break
-                        if (i > 0 && note.ordinal <= lastNoteOrdinal) {
-                            currentOctave++
+                        val note = guidedNotes.getOrNull(i) ?: break
+                        if (i > 0) {
+                            if (i < ascendingSize) {
+                                if (note.ordinal <= lastNoteOrdinal) currentOctave++
+                            } else {
+                                if (note.ordinal >= lastNoteOrdinal) currentOctave--
+                            }
                         }
                         lastNoteOrdinal = note.ordinal
                     }
@@ -255,7 +290,7 @@ fun PracticeTabContent(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            itemsIndexed(uiState.generatedNotes) { index, note ->
+            itemsIndexed(guidedNotes) { index, note ->
                 val isCompleted = if (uiState.guidedPractice.isRunning) {
                     uiState.guidedPractice.completedNotes.contains(index)
                 } else {
@@ -271,7 +306,7 @@ fun PracticeTabContent(
 
                 NoteChip(
                     note = note,
-                    fingerNumber = fingeringGuide?.steps?.getOrNull(index)?.finger?.number,
+                    fingerNumber = guidedFingering.getOrNull(index)?.number,
                     isPlaying = uiState.currentPlayingNote == note,
                     isCompleted = isCompleted,
                     isDetected = isDetected,
@@ -283,9 +318,17 @@ fun PracticeTabContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        PracticeModeToggle(
+            isAscendingDescending = uiState.isAscendingDescendingMode,
+            onToggle = { viewModel.toggleAscendingDescendingMode() },
+            enabled = !uiState.guidedPractice.isRunning
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         GuidedPracticeCard(
             state = uiState.guidedPractice,
-            totalNotes = uiState.generatedNotes.size,
+            totalNotes = uiState.getGuidedPracticeNotes().size,
             onStart = { checkAndRun("Guided Session") { viewModel.startGuidedPracticeWithPermission() } },
             onReset = { checkAndRun("Guided Session") { viewModel.startGuidedPracticeWithPermission() } },
             onCancel = { viewModel.stopGuidedPractice() },
@@ -301,7 +344,34 @@ fun PracticeTabContent(
             onKeyClick = { viewModel.onKeyClick(it) }
         )
 
+        if (FeatureFlags.PIANO_BUDDY_ENABLED) {
+            Spacer(modifier = Modifier.height(8.dp))
+            PianoBuddyStatus(connectionState = uiState.pianoBuddyConnectionState)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
 
+@Composable
+fun PianoBuddyStatus(connectionState: BleConnectionState) {
+    val (color, text) = when (connectionState) {
+        BleConnectionState.CONNECTED -> SuccessAccent to "🟢 PianoBuddy Connected"
+        else -> TextMuted to "🔴 PianoBuddy Not Connected"
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = color,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
