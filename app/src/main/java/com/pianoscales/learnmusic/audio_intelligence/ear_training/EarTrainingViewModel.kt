@@ -20,6 +20,9 @@ class EarTrainingViewModel @Inject constructor(
     private val _targetNote = MutableStateFlow<Note?>(null)
     val targetNote = _targetNote.asStateFlow()
 
+    private val _referenceNote = MutableStateFlow<Note>(Note.C)
+    val referenceNote = _referenceNote.asStateFlow()
+
     private val _selectedNote = MutableStateFlow<Note?>(null)
     val selectedNote = _selectedNote.asStateFlow()
 
@@ -48,6 +51,42 @@ class EarTrainingViewModel @Inject constructor(
         
         if (note == _targetNote.value) {
             viewModelScope.launch { profileRepository.updateStreak() }
+        }
+    }
+
+    // --- Reference Mode Logic ---
+
+    fun startReferenceMode() {
+        playNewReferenceExercise()
+    }
+
+    fun setReferenceNote(note: Note) {
+        _referenceNote.value = note
+        playNewReferenceExercise()
+    }
+
+    fun playNewReferenceExercise() {
+        _selectedNote.value = null
+        _isCorrect.value = null
+        _targetNote.value = Note.entries.random()
+        // We don't auto-play in Reference Mode as per requirements
+    }
+
+    fun playReference() {
+        soundPoolManager.playNote(_referenceNote.value, 4)
+    }
+
+    fun playTarget() {
+        _targetNote.value?.let {
+            soundPoolManager.playNote(it, 4)
+        }
+    }
+
+    fun playBoth() {
+        viewModelScope.launch {
+            playReference()
+            delay(1000) // "short pause"
+            playTarget()
         }
     }
     

@@ -70,10 +70,17 @@ fun EarTrainingScreen(
                     description = "Identify the interval between two notes.",
                     onClick = { currentSubFeature = EarTrainingSubFeature.INTERVAL_TRAINING }
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                FeatureCard(
+                    title = "Reference Mode",
+                    description = "Identify a note relative to a reference note.",
+                    onClick = { currentSubFeature = EarTrainingSubFeature.REFERENCE_MODE }
+                )
             } else {
                 when (subFeature) {
                     EarTrainingSubFeature.NOTE_RECOGNITION -> NoteRecognitionScreen(viewModel)
                     EarTrainingSubFeature.INTERVAL_TRAINING -> IntervalTrainingScreen(viewModel)
+                    EarTrainingSubFeature.REFERENCE_MODE -> ReferenceModeScreen(viewModel)
                 }
             }
         }
@@ -82,7 +89,47 @@ fun EarTrainingScreen(
 
 enum class EarTrainingSubFeature(val title: String) {
     NOTE_RECOGNITION("Note Recognition"),
-    INTERVAL_TRAINING("Interval Training")
+    INTERVAL_TRAINING("Interval Training"),
+    REFERENCE_MODE("Reference Mode")
+}
+
+@Composable
+fun NoteGrid(
+    selectedNote: Note?,
+    targetNote: Note?,
+    isCorrect: Boolean?,
+    onNoteSelected: (Note) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(Note.entries) { note ->
+            val isSelected = selectedNote == note
+            val isTarget = targetNote == note
+
+            val color = when {
+                isSelected && isCorrect == true -> Color.Green
+                isSelected && isCorrect == false -> Color.Red
+                selectedNote != null && isTarget -> Color.Green.copy(alpha = 0.5f)
+                else -> CardSurface
+            }
+
+            Button(
+                onClick = { onNoteSelected(note) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = color,
+                    contentColor = if (color == CardSurface) TextPrimary else Color.White
+                ),
+                modifier = Modifier.height(60.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+            ) {
+                Text(note.displayName)
+            }
+        }
+    }
 }
 
 @Composable
@@ -120,36 +167,12 @@ fun NoteRecognitionScreen(viewModel: EarTrainingViewModel) {
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(Note.entries) { note ->
-                    val isSelected = selectedNote == note
-                    val isTarget = targetNote == note
-                    
-                    val color = when {
-                        isSelected && isCorrect == true -> Color.Green
-                        isSelected && isCorrect == false -> Color.Red
-                        selectedNote != null && isTarget -> Color.Green.copy(alpha = 0.5f)
-                        else -> CardSurface
-                    }
-                    
-                    Button(
-                        onClick = { viewModel.onNoteSelected(note) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = color,
-                            contentColor = if (color == CardSurface) TextPrimary else Color.White
-                        ),
-                        modifier = Modifier.height(60.dp),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                    ) {
-                        Text(note.displayName)
-                    }
-                }
-            }
+            NoteGrid(
+                selectedNote = selectedNote,
+                targetNote = targetNote,
+                isCorrect = isCorrect,
+                onNoteSelected = { viewModel.onNoteSelected(it) }
+            )
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -220,6 +243,109 @@ fun IntervalTrainingScreen(viewModel: EarTrainingViewModel) {
                 Text("Correct!", color = Color.Green, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             } else if (isCorrect == false) {
                 Text("Try Again!", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun ReferenceModeScreen(viewModel: EarTrainingViewModel) {
+    val targetNote by viewModel.targetNote.collectAsState()
+    val referenceNote by viewModel.referenceNote.collectAsState()
+    val selectedNote by viewModel.selectedNote.collectAsState()
+    val isCorrect by viewModel.isCorrect.collectAsState()
+
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (targetNote == null) {
+            Button(
+                onClick = { viewModel.startReferenceMode() },
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
+            ) {
+                Text("Start Session")
+            }
+        } else {
+            // Reference Note Selector
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                OutlinedButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+                ) {
+                    Text("Reference Note: ${referenceNote.displayName}")
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.fillMaxWidth(0.9f)
+                ) {
+                    Note.entries.forEach { note ->
+                        DropdownMenuItem(
+                            text = { Text(note.displayName) },
+                            onClick = {
+                                viewModel.setReferenceNote(note)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Playback Controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { viewModel.playReference() }) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Play Reference", tint = PrimaryAccent)
+                    }
+                    Text("Reference", fontSize = 12.sp, color = TextPrimary)
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { viewModel.playTarget() }) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Play Target", tint = PrimaryAccent)
+                    }
+                    Text("Target", fontSize = 12.sp, color = TextPrimary)
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(onClick = { viewModel.playBoth() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Play Both", tint = PrimaryAccent)
+                    }
+                    Text("Both", fontSize = 12.sp, color = TextPrimary)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (selectedNote != null) {
+                Button(
+                    onClick = { viewModel.playNewReferenceExercise() },
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Text("Next Exercise")
+                }
+            }
+
+            NoteGrid(
+                selectedNote = selectedNote,
+                targetNote = targetNote,
+                isCorrect = isCorrect,
+                onNoteSelected = { viewModel.onNoteSelected(it) }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (isCorrect == true) {
+                Text("Correct!", color = Color.Green, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            } else if (isCorrect == false) {
+                Text("Incorrect. It was ${targetNote?.displayName}", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             }
         }
     }
