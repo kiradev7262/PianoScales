@@ -30,4 +30,9 @@ object PitchToNoteMapper {
         val semitonesFromA4 = 12 * log2(frequency / 440.0)
         return (semitonesFromA4 + 69).roundToInt()
     }
+
+    fun frequencyToMidiContinuous(frequency: Float): Double? {
+        if (frequency <= 0) return null
+        return 12 * log2(frequency / 440.0) + 69
+    }
 }

@@ -45,6 +45,9 @@ class VoiceTrainingViewModel @Inject constructor(
     private val _isListening = MutableStateFlow(false)
     val isListening = _isListening.asStateFlow()
 
+    private val _pitchDistance = MutableStateFlow(0f)
+    val pitchDistance = _pitchDistance.asStateFlow()
+
     fun startListening() {
         if (_isListening.value) return
         _isListening.value = true
@@ -57,6 +60,19 @@ class VoiceTrainingViewModel @Inject constructor(
                 _octave.value = result.octave
                 _confidence.value = result.confidence
                 _timestamp.value = result.timestamp
+
+                // Calculate pitch distance if target note is set
+                _targetNote.value?.let { target ->
+                    val detectedMidiCont = com.pianoscales.learnmusic.audio.pitch.PitchToNoteMapper.frequencyToMidiContinuous(result.frequency)
+                    if (detectedMidiCont != null) {
+                        val targetIndex = target.ordinal
+                        val diff = (detectedMidiCont - targetIndex + 6)
+                        val normalizedDiff = ((diff % 12 + 12) % 12) - 6
+                        _pitchDistance.value = normalizedDiff.toFloat()
+                    } else {
+                        _pitchDistance.value = 0f
+                    }
+                }
 
                 if (result.isStable && result.note != null && result.note == _targetNote.value) {
                     viewModelScope.launch { profileRepository.updateStreak() }

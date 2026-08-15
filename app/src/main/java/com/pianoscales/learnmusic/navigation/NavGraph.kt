@@ -12,6 +12,7 @@ import com.pianoscales.learnmusic.theory.Note
 import com.pianoscales.learnmusic.ui.concepts.ConceptSelectorScreen
 import com.pianoscales.learnmusic.ui.education.BeginnerCompletionScreen
 import com.pianoscales.learnmusic.ui.education.BeginnerJourneyScreen
+import com.pianoscales.learnmusic.ui.education.CircleOfFifthsScreen
 import com.pianoscales.learnmusic.ui.education.LessonContentScreen
 import com.pianoscales.learnmusic.ui.notes.NoteSelectorScreen
 import com.pianoscales.learnmusic.ui.practice.PracticeScreen
@@ -29,6 +30,7 @@ sealed class Screen(val route: String) {
     object Practice : Screen("practice_screen/{note}/{concept}") {
         fun createRoute(note: Note, concept: ConceptType) = "practice_screen/${note.name}/${concept.name}"
     }
+    object CircleOfFifths : Screen("circle_of_fifths")
 }
 
 @Composable
@@ -59,7 +61,15 @@ fun JourneyNavHost(initialSubRoute: String? = null) {
                 },
                 onStartBeginnerJourney = {
                     navController.navigate(Screen.BeginnerJourney.route)
+                },
+                onOpenCircleOfFifths = {
+                    navController.navigate(Screen.CircleOfFifths.route)
                 }
+            )
+        }
+        composable(Screen.CircleOfFifths.route) {
+            CircleOfFifthsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
         composable(Screen.BeginnerJourney.route) {

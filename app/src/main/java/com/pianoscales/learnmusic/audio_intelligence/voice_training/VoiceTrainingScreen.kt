@@ -144,6 +144,7 @@ fun PitchMatchingScreen(viewModel: VoiceTrainingViewModel) {
     val detectedNote by viewModel.detectedNote.collectAsState()
     val isListening by viewModel.isListening.collectAsState()
     val isStable by viewModel.isStable.collectAsState()
+    val pitchDistance by viewModel.pitchDistance.collectAsState()
 
     DisposableEffect(Unit) {
         onDispose { viewModel.stopListening() }
@@ -186,20 +187,16 @@ fun PitchMatchingScreen(viewModel: VoiceTrainingViewModel) {
                 
                 NoteDisplay(detectedNote, isStable)
                 
-                if (detectedNote != null && detectedNote == targetNote && isStable) {
-                    Text("Perfect Match!", color = Color.Green, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                } else if (detectedNote != null) {
-                    val targetIndex = Note.entries.indexOf(targetNote!!)
-                    val detectedIndex = Note.entries.indexOf(detectedNote!!)
-                    val diff = detectedIndex - targetIndex
-                    
-                    val hint = when {
-                        diff > 0 -> "Too High"
-                        diff < 0 -> "Too Low"
-                        else -> "Keep holding..."
-                    }
-                    Text(hint, color = if (diff == 0) Color.Yellow else Color.Red)
-                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                val isCorrect = detectedNote != null && detectedNote == targetNote && isStable
+                
+                VoicePitchMeter(
+                    pitchDistance = pitchDistance,
+                    isPitchStable = isListening && (detectedNote != null),
+                    isCorrect = isCorrect,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
             
             Spacer(modifier = Modifier.weight(1f))

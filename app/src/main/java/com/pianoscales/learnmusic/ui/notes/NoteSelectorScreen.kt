@@ -46,7 +46,8 @@ fun NoteSelectorScreen(
     viewModel: NoteSelectorViewModel = hiltViewModel(),
     onNoteSelected: (Note) -> Unit,
     onContinueLesson: (Note, ConceptType) -> Unit = { _, _ -> },
-    onStartBeginnerJourney: () -> Unit = {}
+    onStartBeginnerJourney: () -> Unit = {},
+    onOpenCircleOfFifths: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -120,6 +121,11 @@ fun NoteSelectorScreen(
                 )
             }
 
+            // Circle of Fifths Feature Card
+            item(span = { GridItemSpan(2) }) {
+                CircleOfFifthsCard(onClick = onOpenCircleOfFifths)
+            }
+
             // Continue Learning (if exists)
             uiState.latestProgress?.let { latest ->
                 item(span = { GridItemSpan(2) }) {
@@ -185,6 +191,49 @@ fun NoteSelectorScreen(
             item(span = { GridItemSpan(2) }) {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun CircleOfFifthsCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = PrimaryAccent.copy(alpha = 0.1f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "⭕ Circle of Fifths",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = PrimaryAccent,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Master key relationships and signatures through our interactive explorer.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary.copy(alpha = 0.8f)
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                tint = PrimaryAccent,
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 }

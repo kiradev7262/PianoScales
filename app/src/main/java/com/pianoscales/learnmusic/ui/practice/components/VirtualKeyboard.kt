@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ReferenceKeyboard(
     onKeyClick: (Note) -> Unit = {},
+    highlightedNotes: List<Note> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -62,9 +63,10 @@ fun ReferenceKeyboard(
                 // White Keys
                 Row(modifier = Modifier.fillMaxSize()) {
                     whiteNotes.forEach { note ->
+                        val isHighlighted = activeHighlights[note] == true || highlightedNotes.contains(note)
                         WhiteKey(
                             note = note,
-                            isHighlighted = activeHighlights[note] == true,
+                            isHighlighted = isHighlighted,
                             onClick = { 
                                 activeHighlights[note] = true
                                 coroutineScope.launch {
@@ -94,9 +96,10 @@ fun ReferenceKeyboard(
                 )
 
                 blackKeyList.forEach { (note, whiteKeyOffset) ->
+                    val isHighlighted = activeHighlights[note] == true || highlightedNotes.contains(note)
                     BlackKeyAt(
                         note = note,
-                        isHighlighted = activeHighlights[note] == true,
+                        isHighlighted = isHighlighted,
                         onKeyClick = onKeyClick,
                         onNoteTapped = { 
                             activeHighlights[note] = true
