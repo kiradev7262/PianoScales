@@ -6,15 +6,22 @@ import com.pianoscales.learnmusic.theory.Note
 import com.pianoscales.learnmusic.theory.generators.CircleKey
 import com.pianoscales.learnmusic.theory.generators.CircleOfFifthsEngine
 import com.pianoscales.learnmusic.theory.generators.TheoryEngine
+import com.pianoscales.learnmusic.theory.playground.PlaygroundChord
+import com.pianoscales.learnmusic.theory.generators.PlaygroundEngine
+import com.pianoscales.learnmusic.theory.playground.PlaygroundProgression
+import com.pianoscales.learnmusic.theory.playground.ProgressionStyle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
 
 enum class CircleInteractiveMode {
-    NONE, CHORD_FAMILIES, POWER_NOTES
+    NONE, CHORD_FAMILIES, POWER_NOTES, PLAYGROUND
 }
 
 data class CircleOfFifthsUiState(
@@ -25,7 +32,13 @@ data class CircleOfFifthsUiState(
     val currentLessonStep: Int = 0,
     val visibleKeyCount: Int = 12,
     val isGuidedMode: Boolean = false,
-    val lessonText: String = ""
+    val lessonText: String = "",
+    val sisterChords: List<PlaygroundChord> = emptyList(),
+    val cousinChords: List<PlaygroundChord> = emptyList(),
+    val generatedProgression: PlaygroundProgression? = null,
+    val isGeneratingProgression: Boolean = false,
+    val progressionStyle: ProgressionStyle = ProgressionStyle.POP,
+    val generationMessage: String = ""
 )
 
 @HiltViewModel
@@ -40,11 +53,18 @@ class CircleOfFifthsViewModel @Inject constructor() : ViewModel() {
 
     fun selectKey(key: CircleKey) {
         updateHighlightedNotes(key, _uiState.value.isMajor)
-        _uiState.update { it.copy(selectedKey = key) }
+        updatePlaygroundData(key.note, _uiState.value.isMajor)
+        _uiState.update { it.copy(selectedKey = key, generatedProgression = null) }
 
         if (_uiState.value.isGuidedMode) {
             checkLessonProgress(key)
         }
+    }
+
+    private fun updatePlaygroundData(root: Note, isMajor: Boolean) {
+        val sisters = PlaygroundEngine.getSisterChords(root, isMajor)
+        val cousins = PlaygroundEngine.getCousinChords(root, isMajor)
+        _uiState.update { it.copy(sisterChords = sisters, cousinChords = cousins) }
     }
 
     fun setInteractiveMode(mode: CircleInteractiveMode) {
@@ -54,7 +74,54 @@ class CircleOfFifthsViewModel @Inject constructor() : ViewModel() {
     fun toggleMajorMinor() {
         val newIsMajor = !_uiState.value.isMajor
         updateHighlightedNotes(_uiState.value.selectedKey, newIsMajor)
-        _uiState.update { it.copy(isMajor = newIsMajor) }
+        updatePlaygroundData(_uiState.value.selectedKey.note, newIsMajor)
+        _uiState.update { it.copy(isMajor = newIsMajor, generatedProgression = null) }
+    }
+
+    fun generateJam() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGeneratingProgression = true) }
+            
+            val messages = listOf(
+                "Exploring related chords...",
+                "Finding a musical path...",
+                "Building your progression...",
+                "Personalizing your jam..."
+            )
+            
+            for (msg in messages) {
+                _uiState.update { it.copy(generationMessage = msg) }
+                delay(600)
+            }
+            
+            val progression = PlaygroundEngine.generateProgression(
+                _uiState.value.selectedKey.note,
+                _uiState.value.isMajor,
+                _uiState.value.progressionStyle
+            )
+            
+            _uiState.update { it.copy(
+                isGeneratingProgression = false,
+                generatedProgression = progression,
+                generationMessage = ""
+            ) }
+        }
+    }
+
+    fun setProgressionStyle(style: ProgressionStyle) {
+        _uiState.update { it.copy(progressionStyle = style) }
+        if (_uiState.value.generatedProgression != null) {
+            generateJam()
+        }
+    }
+
+    fun updateChordInJam(index: Int, newChord: PlaygroundChord) {
+        val current = _uiState.value.generatedProgression ?: return
+        val newChords = current.chords.toMutableList()
+        if (index in newChords.indices) {
+            newChords[index] = newChord
+            _uiState.update { it.copy(generatedProgression = current.copy(chords = newChords)) }
+        }
     }
 
     private fun updateHighlightedNotes(key: CircleKey, isMajor: Boolean) {

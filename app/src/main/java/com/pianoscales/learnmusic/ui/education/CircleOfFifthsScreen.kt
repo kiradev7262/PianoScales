@@ -1,7 +1,8 @@
 package com.pianoscales.learnmusic.ui.education
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,7 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Piano
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +31,8 @@ import com.pianoscales.learnmusic.theory.Note
 import com.pianoscales.learnmusic.theory.generators.CircleKey
 import com.pianoscales.learnmusic.theory.generators.CircleOfFifthsEngine
 import com.pianoscales.learnmusic.theory.generators.RelationshipType
+import com.pianoscales.learnmusic.theory.playground.PlaygroundChord
+import com.pianoscales.learnmusic.theory.playground.ProgressionStyle
 import com.pianoscales.learnmusic.ui.components.PianoScalesDetailTopBar
 import com.pianoscales.learnmusic.ui.practice.components.ReferenceKeyboard
 import com.pianoscales.learnmusic.ui.theme.*
@@ -38,7 +43,7 @@ import kotlin.math.sin
 @Composable
 fun CircleOfFifthsScreen(
     onBack: () -> Unit,
-    viewModel: CircleOfFifthsViewModel = hiltViewModel()
+    viewModel: CircleOfFifthsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
@@ -118,16 +123,45 @@ fun CircleOfFifthsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Piano Visualization
-            Text(
-                text = "Visualization",
-                style = MaterialTheme.typography.labelLarge,
-                color = TextMuted,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth()
-            )
-            ReferenceKeyboard(
-                highlightedNotes = uiState.highlightedNotes,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
+            AnimatedVisibility(visible = uiState.interactiveMode != CircleInteractiveMode.PLAYGROUND) {
+                Column {
+                    Text(
+                        text = "Visualization",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = TextMuted,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth()
+                    )
+                    ReferenceKeyboard(
+                        highlightedNotes = uiState.highlightedNotes,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
+
+            AnimatedVisibility(visible = uiState.interactiveMode == CircleInteractiveMode.PLAYGROUND) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    PlaygroundPanel(
+                        sisterChords = uiState.sisterChords,
+                        cousinChords = uiState.cousinChords,
+                        isGenerating = uiState.isGeneratingProgression
+                    ) {
+                        viewModel.generateJam()
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    if (uiState.isGeneratingProgression) {
+                        GenerationLoader(message = uiState.generationMessage)
+                    } else if (uiState.generatedProgression != null) {
+                        JamResultPanel(
+                            progression = uiState.generatedProgression!!,
+                            currentStyle = uiState.progressionStyle,
+                            onRegenerate = { viewModel.generateJam() },
+                            onStyleChange = { viewModel.setProgressionStyle(it) }
+                        )
+                    }
+                }
+            }
             
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -145,7 +179,7 @@ fun GuidedLessonHeader(
             .padding(horizontal = 20.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.12f)),
-        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.3f))
+        border = BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -187,13 +221,14 @@ fun InteractiveModeSelector(
             .height(48.dp),
         shape = RoundedCornerShape(12.dp),
         color = CardSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
+        border = BorderStroke(1.dp, ElevatedSurface)
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
             val modes = listOf(
                 CircleInteractiveMode.NONE to "Explorer",
-                CircleInteractiveMode.CHORD_FAMILIES to "Chord Families",
-                CircleInteractiveMode.POWER_NOTES to "Power Notes"
+                CircleInteractiveMode.CHORD_FAMILIES to "Families",
+                CircleInteractiveMode.POWER_NOTES to "Power",
+                CircleInteractiveMode.PLAYGROUND to "Playground ✨"
             )
             
             modes.forEach { (mode, label) ->
@@ -267,6 +302,7 @@ fun CircleOfFifthsVisualization(
                     CircleInteractiveMode.POWER_NOTES -> {
                         if (CircleOfFifthsEngine.isPowerNote(selectedKey, circleKey)) PrimaryAccent else null
                     }
+                    CircleInteractiveMode.PLAYGROUND -> if (isSelected) PrimaryAccent else null
                     CircleInteractiveMode.NONE -> if (isSelected) PrimaryAccent else null
                 }
 
@@ -337,7 +373,7 @@ fun KeyNode(
         shape = CircleShape,
         color = backgroundColor,
         tonalElevation = if (isSelected) 8.dp else 2.dp,
-        border = if (isSelected || highlightColor != null) null else androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
+        border = if (isSelected || highlightColor != null) null else BorderStroke(1.dp, ElevatedSurface)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
@@ -363,7 +399,7 @@ fun KeyInfoPanel(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = CardSurface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
+        border = BorderStroke(1.dp, ElevatedSurface)
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(
@@ -422,7 +458,7 @@ fun KeyInfoPanel(
                         shape = RoundedCornerShape(12.dp),
                         color = PrimaryBackground.copy(alpha = 0.5f),
                         modifier = Modifier.weight(1f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
+                        border = BorderStroke(1.dp, ElevatedSurface)
                     ) {
                         Box(modifier = Modifier.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
                             Text(
@@ -436,5 +472,282 @@ fun KeyInfoPanel(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PlaygroundPanel(
+    sisterChords: List<PlaygroundChord>,
+    cousinChords: List<PlaygroundChord>,
+    isGenerating: Boolean,
+    onJam: () -> Unit
+) {
+    Column {
+        Text(
+            text = "MUSICIAN'S PLAYGROUND",
+            style = MaterialTheme.typography.labelMedium,
+            color = PrimaryAccent,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.5.sp
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Sister Chords",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold
+        )
+        Text(text = "Highly related diatonic chords", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        ChordRow(chords = sisterChords)
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            text = "Cousin Chords",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold
+        )
+        Text(text = "Harmonically interesting relatives", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        ChordRow(chords = cousinChords)
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Button(
+            onClick = onJam,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+            enabled = !isGenerating
+        ) {
+            Icon(Icons.Rounded.AutoAwesome, contentDescription = null)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("✨ JAM FROM HERE", fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+        }
+    }
+}
+
+@Composable
+fun ChordRow(chords: List<PlaygroundChord>) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        chords.take(4).forEach { chord ->
+            ChordCard(chord = chord, modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun ChordCard(chord: PlaygroundChord, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = CardSurface,
+        border = BorderStroke(1.dp, ElevatedSurface)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = chord.romanNumeral,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted
+            )
+            Text(
+                text = chord.displayName,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        }
+    }
+}
+
+@Composable
+fun GenerationLoader(message: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.05f))
+    ) {
+        Column(
+            modifier = Modifier.padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator(color = PrimaryAccent, strokeWidth = 3.dp)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun JamResultPanel(
+    progression: com.pianoscales.learnmusic.theory.playground.PlaygroundProgression,
+    currentStyle: ProgressionStyle,
+    onRegenerate: () -> Unit,
+    onStyleChange: (ProgressionStyle) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.08f)),
+        border = BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.2f))
+    ) {
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "YOUR JAM",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = PrimaryAccent,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp
+                )
+                
+                IconButton(onClick = onRegenerate) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Regenerate", tint = PrimaryAccent)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                progression.chords.forEach { chord ->
+                    JamChordCard(chord = chord, modifier = Modifier.weight(1f))
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                text = "Style",
+                style = MaterialTheme.typography.labelMedium,
+                color = TextMuted
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ProgressionStyle.entries.take(4).forEach { style ->
+                    StyleChip(
+                        style = style,
+                        isSelected = style == currentStyle,
+                        onClick = { onStyleChange(style) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = { /* TODO: Play */ },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessAccent)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Play")
+                }
+                
+                OutlinedButton(
+                    onClick = { /* TODO: Practice */ },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, SuccessAccent),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SuccessAccent)
+                ) {
+                    Icon(Icons.Rounded.Piano, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Practice")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun JamChordCard(chord: PlaygroundChord, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = PrimaryBackground,
+        border = BorderStroke(1.dp, ElevatedSurface),
+        tonalElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = chord.romanNumeral,
+                style = MaterialTheme.typography.labelSmall,
+                color = PrimaryAccent,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = chord.displayName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+                color = TextPrimary
+            )
+        }
+    }
+}
+
+@Composable
+fun StyleChip(
+    style: ProgressionStyle,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(8.dp),
+        color = if (isSelected) PrimaryAccent else PrimaryBackground.copy(alpha = 0.5f),
+        border = if (isSelected) null else BorderStroke(1.dp, ElevatedSurface)
+    ) {
+        Text(
+            text = style.name.lowercase().replaceFirstChar { it.uppercase() },
+            modifier = Modifier.padding(vertical = 8.dp),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isSelected) PrimaryBackground else TextPrimary,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }
