@@ -2,26 +2,25 @@ package com.pianoscales.learnmusic.ui.education
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,6 +41,7 @@ fun CircleOfFifthsScreen(
     viewModel: CircleOfFifthsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
 
     Scaffold(
         containerColor = PrimaryBackground,
@@ -56,34 +56,36 @@ fun CircleOfFifthsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .verticalScroll(scrollState)
+                .padding(bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Guided Learning Header
+            // Guided Learning CTA / Header
             if (uiState.isGuidedMode) {
+                Spacer(modifier = Modifier.height(16.dp))
                 GuidedLessonHeader(
                     text = uiState.lessonText
                 ) {
                     viewModel.nextLessonStep()
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             } else if (uiState.currentLessonStep == 0) {
-                Button(
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
                     onClick = { viewModel.startGuidedLesson() },
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = ButtonDefaults.textButtonColors(contentColor = PrimaryAccent),
                 ) {
-                    Text("Start Guided Lesson", color = PrimaryBackground)
+                    Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Start Guided Lesson", fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Interactive Circle
+            // Interactive Circle - Main Piece
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .padding(16.dp),
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 CircleOfFifthsVisualization(
@@ -95,28 +97,39 @@ fun CircleOfFifthsScreen(
                 }
             }
 
+            // Mode Selector - Segmented Control Style
             InteractiveModeSelector(
                 currentMode = uiState.interactiveMode,
-                onModeSelected = { viewModel.setInteractiveMode(it) }
+                onModeSelected = { viewModel.setInteractiveMode(it) },
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Info Panel
+            // Info Panel - Restructured Card
             KeyInfoPanel(
                 selectedKey = uiState.selectedKey,
                 isMajor = uiState.isMajor,
                 highlightedNotes = uiState.highlightedNotes,
-                onToggleMajorMinor = { viewModel.toggleMajorMinor() }
+                onToggleMajorMinor = { viewModel.toggleMajorMinor() },
+                modifier = Modifier.padding(horizontal = 20.dp)
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Piano Visualization
+            Text(
+                text = "Visualization",
+                style = MaterialTheme.typography.labelLarge,
+                color = TextMuted,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth()
+            )
             ReferenceKeyboard(
                 highlightedNotes = uiState.highlightedNotes,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
+            
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -127,25 +140,36 @@ fun GuidedLessonHeader(
     onNext: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.15f)),
+        colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.12f)),
         border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.3f))
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryAccent)
+            Icon(Icons.Default.Info, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextPrimary,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                lineHeight = 20.sp
             )
-            IconButton(onClick = onNext) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next", tint = PrimaryAccent)
+            IconButton(
+                onClick = onNext,
+                modifier = Modifier.size(32.dp).background(PrimaryAccent, CircleShape)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward, 
+                    contentDescription = "Next", 
+                    tint = PrimaryBackground,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -154,30 +178,54 @@ fun GuidedLessonHeader(
 @Composable
 fun InteractiveModeSelector(
     currentMode: CircleInteractiveMode,
-    onModeSelected: (CircleInteractiveMode) -> Unit
+    onModeSelected: (CircleInteractiveMode) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = CardSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
     ) {
-        val modes = listOf(
-            CircleInteractiveMode.NONE to "Explorer",
-            CircleInteractiveMode.CHORD_FAMILIES to "Chord Families",
-            CircleInteractiveMode.POWER_NOTES to "Power Notes"
-        )
-        
-        modes.forEach { (mode, label) ->
-            FilterChip(
-                selected = currentMode == mode,
-                onClick = { onModeSelected(mode) },
-                label = { Text(label, fontSize = 12.sp) },
-                modifier = Modifier.weight(1f),
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = PrimaryAccent.copy(alpha = 0.2f),
-                    selectedLabelColor = PrimaryAccent,
-                    selectedLeadingIconColor = PrimaryAccent
-                )
+        Row(modifier = Modifier.fillMaxSize()) {
+            val modes = listOf(
+                CircleInteractiveMode.NONE to "Explorer",
+                CircleInteractiveMode.CHORD_FAMILIES to "Chord Families",
+                CircleInteractiveMode.POWER_NOTES to "Power Notes"
             )
+            
+            modes.forEach { (mode, label) ->
+                val isSelected = currentMode == mode
+                val backgroundColor by animateColorAsState(
+                    targetValue = if (isSelected) PrimaryAccent else Color.Transparent,
+                    label = "bg"
+                )
+                val textColor by animateColorAsState(
+                    targetValue = if (isSelected) PrimaryBackground else TextMuted,
+                    label = "text"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(4.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(backgroundColor)
+                        .clickable { onModeSelected(mode) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = textColor,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
         }
     }
 }
@@ -237,7 +285,6 @@ fun CircleOfFifthsVisualization(
                 val innerX = (radius.value * 0.52f * cos(angle)).dp
                 val innerY = (radius.value * 0.52f * sin(angle)).dp
                 
-                // For Chord Families, Relative Minors of Sisters are also Sisters
                 val innerHighlight = when (interactiveMode) {
                     CircleInteractiveMode.CHORD_FAMILIES -> outerHighlight
                     else -> null
@@ -270,7 +317,7 @@ fun KeyNode(
     val backgroundColor by animateColorAsState(
         targetValue = when {
             isSelected -> PrimaryAccent
-            highlightColor != null -> highlightColor.copy(alpha = 0.8f)
+            highlightColor != null -> highlightColor.copy(alpha = 0.9f)
             else -> CardSurface
         },
         label = "bgColor"
@@ -290,15 +337,15 @@ fun KeyNode(
         shape = CircleShape,
         color = backgroundColor,
         tonalElevation = if (isSelected) 8.dp else 2.dp,
-        border = if (isSelected || highlightColor != null) null else androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.2f))
+        border = if (isSelected || highlightColor != null) null else androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
-                style = if (isSmall) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleMedium,
+                style = if (isSmall) MaterialTheme.typography.labelSmall else MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = textColor,
-                fontSize = if (isSmall) 11.sp else 14.sp
+                fontSize = if (isSmall) 10.sp else 14.sp
             )
         }
     }
@@ -309,18 +356,20 @@ fun KeyInfoPanel(
     selectedKey: CircleKey,
     isMajor: Boolean,
     highlightedNotes: List<Note>,
-    onToggleMajorMinor: () -> Unit
+    onToggleMajorMinor: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CardSurface)
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(24.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 Column {
                     Text(
@@ -329,6 +378,7 @@ fun KeyInfoPanel(
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (selectedKey.accidentalCount == 0) "No sharps or flats" 
                                else "${selectedKey.accidentalCount} ${if (selectedKey.isSharp) "Sharps" else "Flats"}",
@@ -343,8 +393,8 @@ fun KeyInfoPanel(
                     modifier = Modifier.clickable { onToggleMajorMinor() }
                 ) {
                     Text(
-                        text = if (isMajor) "Relative Minor: ${selectedKey.relativeMinorDisplayName}m" else "Relative Major: ${selectedKey.displayName}",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        text = if (isMajor) "→ ${selectedKey.relativeMinorDisplayName}m" else "→ ${selectedKey.displayName}",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = PrimaryAccent,
                         fontWeight = FontWeight.Bold
@@ -352,15 +402,16 @@ fun KeyInfoPanel(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
             Text(
-                text = "Scale Notes",
+                text = "Notes in this Scale",
                 style = MaterialTheme.typography.labelMedium,
-                color = TextMuted
+                color = TextMuted,
+                letterSpacing = 1.sp
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -368,11 +419,12 @@ fun KeyInfoPanel(
             ) {
                 highlightedNotes.forEach { note ->
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = PrimaryBackground,
-                        modifier = Modifier.weight(1f)
+                        shape = RoundedCornerShape(12.dp),
+                        color = PrimaryBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.weight(1f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ElevatedSurface)
                     ) {
-                        Box(modifier = Modifier.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
                             Text(
                                 text = CircleOfFifthsEngine.getNoteName(note, selectedKey),
                                 style = MaterialTheme.typography.bodyMedium,
