@@ -26,10 +26,14 @@ import kotlinx.coroutines.launch
 fun ReferenceKeyboard(
     onKeyClick: (Note) -> Unit = {},
     highlightedNotes: List<Note> = emptyList(),
+    rootNote: Note? = null,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
     val activeHighlights = remember { mutableStateMapOf<Note, Boolean>() }
+
+    val startNote = remember(rootNote) { calculateBestStartNote(rootNote) }
+    val (whiteNotes, blackKeyList) = remember(startNote) { getKeyboardRange(startNote) }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -57,7 +61,6 @@ fun ReferenceKeyboard(
                     .fillMaxWidth()
                     .height(180.dp)
             ) {
-                val whiteNotes = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
                 val whiteKeyWidth = maxWidth / 7
                 
                 // White Keys
@@ -86,15 +89,6 @@ fun ReferenceKeyboard(
                 val blackKeyWidth = whiteKeyWidth * 0.65f
                 val blackKeyHeight = 110.dp
                 
-                // Black Keys
-                val blackKeyList = listOf(
-                    Note.C_SHARP to 1f,
-                    Note.D_SHARP to 2f,
-                    Note.F_SHARP to 4f,
-                    Note.G_SHARP to 5f,
-                    Note.A_SHARP to 6f
-                )
-
                 blackKeyList.forEach { (note, whiteKeyOffset) ->
                     val isHighlighted = activeHighlights[note] == true || highlightedNotes.contains(note)
                     BlackKeyAt(
@@ -198,4 +192,56 @@ private fun BlackKey(
             modifier = Modifier.padding(bottom = 8.dp)
         )
     }
+}
+
+private fun calculateBestStartNote(root: Note?): Note {
+    if (root == null) return Note.C
+    
+    val whiteNotesList = listOf(Note.C, Note.D, Note.E, Note.F, Note.G, Note.A, Note.B)
+    
+    // Map root to its nearest white key (on the left if black)
+    val rootBase = when (root) {
+        Note.C_SHARP -> Note.C
+        Note.D_SHARP -> Note.D
+        Note.F_SHARP -> Note.F
+        Note.G_SHARP -> Note.G
+        Note.A_SHARP -> Note.A
+        else -> root
+    }
+    
+    val rootIndex = whiteNotesList.indexOf(rootBase)
+    val startWhiteIndex = (rootIndex - 1 + whiteNotesList.size) % whiteNotesList.size
+    return whiteNotesList[startWhiteIndex]
+}
+
+private fun isWhiteKey(note: Note): Boolean {
+    return note == Note.C || note == Note.D || note == Note.E || note == Note.F || 
+           note == Note.G || note == Note.A || note == Note.B
+}
+
+private fun getKeyboardRange(startNote: Note): Pair<List<Note>, List<Pair<Note, Float>>> {
+    val whiteNotes = mutableListOf<Note>()
+    val blackKeys = mutableListOf<Pair<Note, Float>>()
+
+    val allNotes = Note.entries
+    val startOrdinal = startNote.ordinal
+    
+    var whiteCount = 0
+    var i = 0
+    // We want 7 white keys
+    while (whiteCount < 7) {
+        val note = allNotes[(startOrdinal + i) % 12]
+        if (isWhiteKey(note)) {
+            whiteNotes.add(note)
+            whiteCount++
+        } else {
+            // A black key between whiteCount and whiteCount + 1 has offset = whiteCount
+            if (whiteCount in 1..6) {
+                blackKeys.add(note to whiteCount.toFloat())
+            }
+        }
+        i++
+    }
+    
+    return whiteNotes to blackKeys
 }

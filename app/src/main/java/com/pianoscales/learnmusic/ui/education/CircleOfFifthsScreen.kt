@@ -122,17 +122,70 @@ fun CircleOfFifthsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Families exploration panel
+            AnimatedVisibility(visible = uiState.interactiveMode == CircleInteractiveMode.CHORD_FAMILIES) {
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    Text(
+                        text = "CHORD RELATIONSHIPS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = PrimaryAccent,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(text = "Sister Chords", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(text = "Tap a chord to see it on the keyboard", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ChordRow(
+                        chords = uiState.sisterChords,
+                        selectedChord = uiState.selectedChord,
+                        onChordClick = { viewModel.selectChord(it) }
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(text = "Cousin Chords", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ChordRow(
+                        chords = uiState.cousinChords,
+                        selectedChord = uiState.selectedChord,
+                        onChordClick = { viewModel.selectChord(it) }
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
             // Piano Visualization
             AnimatedVisibility(visible = uiState.interactiveMode != CircleInteractiveMode.PLAYGROUND) {
+                val keyboardRoot = when (uiState.interactiveMode) {
+                    CircleInteractiveMode.CHORD_FAMILIES -> uiState.selectedChord?.root ?: (if (uiState.isMajor) uiState.selectedKey.note else uiState.selectedKey.relativeMinor)
+                    CircleInteractiveMode.POWER_NOTES -> uiState.selectedKey.note
+                    else -> if (uiState.isMajor) uiState.selectedKey.note else uiState.selectedKey.relativeMinor
+                }
+
+                val keyboardNotes = when (uiState.interactiveMode) {
+                    CircleInteractiveMode.CHORD_FAMILIES -> uiState.selectedChord?.notes ?: uiState.highlightedNotes
+                    CircleInteractiveMode.POWER_NOTES -> {
+                        CircleOfFifthsEngine.fullCircle
+                            .filter { CircleOfFifthsEngine.isPowerNote(uiState.selectedKey, it) }
+                            .map { it.note }
+                    }
+                    else -> uiState.highlightedNotes
+                }
+
                 Column {
                     Text(
-                        text = "Visualization",
+                        text = when {
+                            uiState.interactiveMode == CircleInteractiveMode.CHORD_FAMILIES && uiState.selectedChord != null -> 
+                                "Chord: ${uiState.selectedChord!!.displayName}"
+                            uiState.interactiveMode == CircleInteractiveMode.POWER_NOTES -> "Power Notes"
+                            else -> "Visualization"
+                        },
                         style = MaterialTheme.typography.labelLarge,
                         color = TextMuted,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth()
                     )
                     ReferenceKeyboard(
-                        highlightedNotes = uiState.highlightedNotes,
+                        highlightedNotes = keyboardNotes,
+                        rootNote = keyboardRoot,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
@@ -538,24 +591,51 @@ fun PlaygroundPanel(
 }
 
 @Composable
-fun ChordRow(chords: List<PlaygroundChord>) {
+fun ChordRow(
+    chords: List<PlaygroundChord>,
+    selectedChord: PlaygroundChord? = null,
+    onChordClick: (PlaygroundChord) -> Unit = {}
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         chords.take(4).forEach { chord ->
-            ChordCard(chord = chord, modifier = Modifier.weight(1f))
+            ChordCard(
+                chord = chord, 
+                isSelected = chord == selectedChord,
+                onClick = { onChordClick(chord) },
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
-fun ChordCard(chord: PlaygroundChord, modifier: Modifier = Modifier) {
+fun ChordCard(
+    chord: PlaygroundChord, 
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {}
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) PrimaryAccent else CardSurface,
+        label = "chordBg"
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) PrimaryBackground else TextPrimary,
+        label = "chordText"
+    )
+    val mutedColor by animateColorAsState(
+        targetValue = if (isSelected) PrimaryBackground.copy(alpha = 0.7f) else TextMuted,
+        label = "chordMuted"
+    )
+
     Surface(
-        modifier = modifier,
+        modifier = modifier.clip(RoundedCornerShape(12.dp)).clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        color = CardSurface,
-        border = BorderStroke(1.dp, ElevatedSurface)
+        color = backgroundColor,
+        border = if (isSelected) null else BorderStroke(1.dp, ElevatedSurface)
     ) {
         Column(
             modifier = Modifier.padding(vertical = 12.dp),
@@ -564,13 +644,13 @@ fun ChordCard(chord: PlaygroundChord, modifier: Modifier = Modifier) {
             Text(
                 text = chord.romanNumeral,
                 style = MaterialTheme.typography.labelSmall,
-                color = TextMuted
+                color = mutedColor
             )
             Text(
                 text = chord.displayName,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = textColor
             )
         }
     }

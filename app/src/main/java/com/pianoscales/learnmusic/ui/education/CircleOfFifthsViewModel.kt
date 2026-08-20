@@ -35,6 +35,7 @@ data class CircleOfFifthsUiState(
     val lessonText: String = "",
     val sisterChords: List<PlaygroundChord> = emptyList(),
     val cousinChords: List<PlaygroundChord> = emptyList(),
+    val selectedChord: PlaygroundChord? = null,
     val generatedProgression: PlaygroundProgression? = null,
     val isGeneratingProgression: Boolean = false,
     val progressionStyle: ProgressionStyle = ProgressionStyle.POP,
@@ -68,7 +69,11 @@ class CircleOfFifthsViewModel @Inject constructor() : ViewModel() {
     }
 
     fun setInteractiveMode(mode: CircleInteractiveMode) {
-        _uiState.update { it.copy(interactiveMode = mode) }
+        _uiState.update { it.copy(interactiveMode = mode, selectedChord = null) }
+    }
+
+    fun selectChord(chord: PlaygroundChord?) {
+        _uiState.update { it.copy(selectedChord = chord) }
     }
 
     fun toggleMajorMinor() {
