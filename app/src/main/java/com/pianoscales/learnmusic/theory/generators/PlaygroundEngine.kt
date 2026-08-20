@@ -7,34 +7,46 @@ import kotlin.random.Random
 object PlaygroundEngine {
 
     fun getSisterChords(root: Note, isMajor: Boolean): List<PlaygroundChord> {
+        val currentIndex = CircleOfFifthsEngine.fullCircle.indexOfFirst { it.note == root }
+        if (currentIndex == -1) return emptyList()
+
+        val left = CircleOfFifthsEngine.fullCircle[(currentIndex + 11) % 12]
+        val right = CircleOfFifthsEngine.fullCircle[(currentIndex + 1) % 12]
+
         return if (isMajor) {
-            getMajorDiatonicChords(root)
+            listOf(
+                createChord(left.note, ChordQuality.MAJOR, "IV"),
+                createChord(right.note, ChordQuality.MAJOR, "V")
+            )
         } else {
-            getMinorDiatonicChords(root)
+            listOf(
+                createChord(left.note, ChordQuality.MAJOR, "VI"),
+                createChord(right.note, ChordQuality.MAJOR, "VII")
+            )
         }
     }
 
     fun getCousinChords(root: Note, isMajor: Boolean): List<PlaygroundChord> {
-        val cousins = mutableListOf<PlaygroundChord>()
-        
-        // Parallel Major/Minor
-        if (isMajor) {
-            cousins.addAll(getMinorDiatonicChords(root).take(3)) // Parallel minor's i, iv, v or similar
-        } else {
-            cousins.addAll(getMajorDiatonicChords(root).take(3))
-        }
-
-        // Neighbors on Circle of Fifths
         val currentIndex = CircleOfFifthsEngine.fullCircle.indexOfFirst { it.note == root }
-        if (currentIndex != -1) {
-            val clockwise = CircleOfFifthsEngine.fullCircle[(currentIndex + 1) % 12]
-            val counterClockwise = CircleOfFifthsEngine.fullCircle[(currentIndex + 11) % 12]
-            
-            cousins.add(createChord(clockwise.note, if (isMajor) ChordQuality.MAJOR else ChordQuality.MINOR, "V of V" ))
-            cousins.add(createChord(counterClockwise.note, if (isMajor) ChordQuality.MAJOR else ChordQuality.MINOR, "IV of I"))
-        }
+        if (currentIndex == -1) return emptyList()
 
-        return cousins.distinctBy { "${it.root}${it.quality}" }
+        val left = CircleOfFifthsEngine.fullCircle[(currentIndex + 11) % 12]
+        val center = CircleOfFifthsEngine.fullCircle[currentIndex]
+        val right = CircleOfFifthsEngine.fullCircle[(currentIndex + 1) % 12]
+
+        return if (isMajor) {
+            listOf(
+                createChord(left.relativeMinor, ChordQuality.MINOR, "ii"),
+                createChord(center.relativeMinor, ChordQuality.MINOR, "vi"),
+                createChord(right.relativeMinor, ChordQuality.MINOR, "iii")
+            )
+        } else {
+            listOf(
+                createChord(left.relativeMinor, ChordQuality.MINOR, "iv"),
+                createChord(center.relativeMinor, ChordQuality.MINOR, "i"),
+                createChord(right.relativeMinor, ChordQuality.MINOR, "v")
+            )
+        }
     }
 
     private fun getMajorDiatonicChords(root: Note): List<PlaygroundChord> {
@@ -87,6 +99,7 @@ object PlaygroundEngine {
         style: ProgressionStyle,
         length: Int = 4
     ): PlaygroundProgression {
+        val diatonic = if (isMajor) getMajorDiatonicChords(root) else getMinorDiatonicChords(root)
         val sisters = getSisterChords(root, isMajor)
         val cousins = getCousinChords(root, isMajor)
         
@@ -101,7 +114,7 @@ object PlaygroundEngine {
                     listOf(listOf(0, 5, 2, 6), listOf(0, 6, 5, 4))
                 }
                 val pattern = patterns.random()
-                pattern.forEach { progressionChords.add(sisters[it]) }
+                pattern.forEach { progressionChords.add(diatonic[it]) }
             }
             ProgressionStyle.CHILL -> {
                 // I-vi-ii-V or I-IV-I-IV
@@ -111,7 +124,7 @@ object PlaygroundEngine {
                     listOf(listOf(0, 3, 0, 3), listOf(0, 2, 5, 6))
                 }
                 val pattern = patterns.random()
-                pattern.forEach { progressionChords.add(sisters[it]) }
+                pattern.forEach { progressionChords.add(diatonic[it]) }
             }
             ProgressionStyle.EMOTIONAL -> {
                 // vi-IV-I-V or i-VI-III-VII
@@ -121,11 +134,11 @@ object PlaygroundEngine {
                     listOf(listOf(0, 5, 2, 6), listOf(5, 6, 0, 4))
                 }
                 val pattern = patterns.random()
-                pattern.forEach { progressionChords.add(sisters[it]) }
+                pattern.forEach { progressionChords.add(diatonic[it]) }
             }
             ProgressionStyle.UNEXPECTED -> {
                 // Mix in some cousins
-                progressionChords.add(sisters[0]) // Start with Tonic
+                progressionChords.add(diatonic[0]) // Start with Tonic
                 for (i in 1 until length - 1) {
                     if (Random.nextBoolean()) {
                         progressionChords.add(sisters.random())
@@ -133,12 +146,12 @@ object PlaygroundEngine {
                         progressionChords.add(cousins.random())
                     }
                 }
-                progressionChords.add(sisters[4]) // End with Dominant or something stable
+                progressionChords.add(diatonic[4]) // End with Dominant or something stable
             }
             else -> {
-                // Default random from sisters
+                // Default random from diatonic
                 for (i in 0 until length) {
-                    progressionChords.add(sisters.random())
+                    progressionChords.add(diatonic.random())
                 }
             }
         }
