@@ -13,7 +13,13 @@ data class Song(
     val builtIn: Boolean = false,
     val createdAt: Long = 0L,
     val modifiedAt: Long = 0L
-)
+) {
+    /**
+     * Continuous ordered sequence of all notes in the song.
+     */
+    val notes: List<NoteWithOctave>
+        get() = lines.flatMap { it.notes }
+}
 
 data class SongLine(
     val notes: List<NoteWithOctave>

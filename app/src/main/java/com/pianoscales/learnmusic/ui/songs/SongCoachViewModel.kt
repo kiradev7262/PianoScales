@@ -21,7 +21,6 @@ import javax.inject.Inject
 
 data class SongCoachUiState(
     val song: Song? = null,
-    val currentLineIndex: Int = 0,
     val currentNoteIndex: Int = 0,
     val isCompleted: Boolean = false,
     val pianoMode: PianoMode = PianoMode.VIRTUAL,
@@ -35,8 +34,7 @@ data class SongCoachUiState(
     val timestamp: Long = 0L,
     val pianoBuddyConnectionState: BleConnectionState = BleConnectionState.IDLE
 ) {
-    val currentLine: SongLine? get() = song?.lines?.getOrNull(currentLineIndex)
-    val currentNote: NoteWithOctave? get() = currentLine?.notes?.getOrNull(currentNoteIndex)
+    val currentNote: NoteWithOctave? get() = song?.notes?.getOrNull(currentNoteIndex)
 }
 
 @HiltViewModel
@@ -222,18 +220,11 @@ class SongCoachViewModel @Inject constructor(
 
         _uiState.update { state ->
             val song = state.song ?: return@update state
-            val currentLine = state.currentLine ?: return@update state
-            
             val nextNoteIndex = state.currentNoteIndex + 1
-            if (nextNoteIndex < currentLine.notes.size) {
+            if (nextNoteIndex < song.notes.size) {
                 state.copy(currentNoteIndex = nextNoteIndex)
             } else {
-                val nextLineIndex = state.currentLineIndex + 1
-                if (nextLineIndex < song.lines.size) {
-                    state.copy(currentLineIndex = nextLineIndex, currentNoteIndex = 0)
-                } else {
-                    state.copy(isCompleted = true)
-                }
+                state.copy(currentNoteIndex = nextNoteIndex, isCompleted = true)
             }
         }
 
@@ -269,44 +260,40 @@ class SongCoachViewModel @Inject constructor(
 
     private fun startDemo() {
         val song = _uiState.value.song ?: return
+        val notes = song.notes
+        if (notes.isEmpty()) return
         
         demoJob?.cancel()
         demoJob = viewModelScope.launch {
             val wasListening = _uiState.value.isListening
-            val previousLineIndex = _uiState.value.currentLineIndex
             val previousNoteIndex = _uiState.value.currentNoteIndex
             val previousCompleted = _uiState.value.isCompleted
             
             stopListening()
             
-            _uiState.update { it.copy(isDemoPlaying = true, currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
+            _uiState.update { it.copy(isDemoPlaying = true, currentNoteIndex = 0, isCompleted = false) }
             
             try {
                 var lastTimestamp: Long? = null
                 
-                song.lines.forEachIndexed { lineIndex, line ->
-                    line.notes.forEachIndexed { noteIndex, noteWithOctave ->
-                        val currentTimestamp = noteWithOctave.timestamp
-                        val lastTs = lastTimestamp
-                        if (lastTs != null && currentTimestamp != null) {
-                            val delayVal = (currentTimestamp - lastTs).coerceAtLeast(0)
-                            delay(delayVal)
-                        } else if (lineIndex > 0 || noteIndex > 0) {
-                            // Legacy fixed interval
-                            val delayVal = if (noteIndex == 0) 650L else 450L
-                            delay(delayVal)
-                        }
-
-                        _uiState.update { it.copy(currentLineIndex = lineIndex, currentNoteIndex = noteIndex) }
-                        soundPoolManager.playNote(noteWithOctave.note, noteWithOctave.octave)
-                        lastTimestamp = currentTimestamp
+                notes.forEachIndexed { noteIndex, noteWithOctave ->
+                    val currentTimestamp = noteWithOctave.timestamp
+                    val lastTs = lastTimestamp
+                    if (lastTs != null && currentTimestamp != null) {
+                        val delayVal = (currentTimestamp - lastTs).coerceAtLeast(0)
+                        delay(delayVal)
+                    } else if (noteIndex > 0) {
+                        delay(500L)
                     }
+
+                    _uiState.update { it.copy(currentNoteIndex = noteIndex) }
+                    soundPoolManager.playNote(noteWithOctave.note, noteWithOctave.octave)
+                    lastTimestamp = currentTimestamp
                 }
             } finally {
                 _uiState.update { 
                     it.copy(
                         isDemoPlaying = false, 
-                        currentLineIndex = previousLineIndex, 
                         currentNoteIndex = previousNoteIndex,
                         isCompleted = previousCompleted
                     ) 
@@ -325,7 +312,7 @@ class SongCoachViewModel @Inject constructor(
 
     fun reset() {
         if (_uiState.value.isDemoPlaying) stopDemo()
-        _uiState.update { it.copy(currentLineIndex = 0, currentNoteIndex = 0, isCompleted = false) }
+        _uiState.update { it.copy(currentNoteIndex = 0, isCompleted = false) }
         inputState = InputState.WAITING_FOR_PRESS
         lastMatchedMidi = null
         silenceCounter = 0

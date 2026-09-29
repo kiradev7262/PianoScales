@@ -575,7 +575,7 @@ fun SongTile(
                         color = TextMuted
                     )
                     Text(
-                        text = "${song.lines.size} Lines",
+                        text = "${song.notes.size} Notes",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextMuted
                     )

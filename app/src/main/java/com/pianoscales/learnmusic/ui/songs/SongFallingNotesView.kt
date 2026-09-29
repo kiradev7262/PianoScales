@@ -23,7 +23,6 @@ import com.pianoscales.learnmusic.ui.theme.*
 @Composable
 fun SongFallingNotesView(
     song: Song,
-    currentLineIndex: Int,
     currentNoteIndex: Int,
     isDemoPlaying: Boolean,
     layout: SongKeyboardLayout,
@@ -32,13 +31,8 @@ fun SongFallingNotesView(
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
-    val line = song.lines.getOrNull(currentLineIndex)
+    val notes = song.notes
     val animatedNoteIndex = remember { Animatable(currentNoteIndex.toFloat()) }
-
-    // Reset snap when line changes
-    LaunchedEffect(currentLineIndex) {
-        animatedNoteIndex.snapTo(currentNoteIndex.toFloat())
-    }
 
     // Smoothly animate when note index advances
     LaunchedEffect(currentNoteIndex, isDemoPlaying) {
@@ -64,7 +58,7 @@ fun SongFallingNotesView(
             val widthPx = size.width
             val heightPx = size.height
 
-            if (widthPx <= 0f || heightPx <= 0f || line == null || line.notes.isEmpty()) return@Canvas
+            if (widthPx <= 0f || heightPx <= 0f || notes.isEmpty()) return@Canvas
 
             val whiteKeyWidthPx = widthPx / layout.totalWhiteKeys.toFloat()
             val targetY = heightPx - with(density) { 20.dp.toPx() }
@@ -99,7 +93,7 @@ fun SongFallingNotesView(
             // 3. Draw Falling Notes
             val f = animatedNoteIndex.value
 
-            line.notes.forEachIndexed { index, noteWithOctave ->
+            notes.forEachIndexed { index, noteWithOctave ->
                 val noteY = targetY - (index - f) * stepY
 
                 // Render if within canvas vertical bounds (+ padding)

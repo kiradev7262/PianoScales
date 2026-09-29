@@ -52,8 +52,6 @@ fun SongCoachScreen(
         // Header
         SongCoachHeader(
             title = song.title,
-            currentLine = uiState.currentLineIndex + 1,
-            totalLines = song.lines.size,
             onBack = onBack
         )
 
@@ -96,7 +94,6 @@ fun SongCoachScreen(
                 // Falling Piano Notes (~75% height)
                 SongFallingNotesView(
                     song = song,
-                    currentLineIndex = uiState.currentLineIndex,
                     currentNoteIndex = uiState.currentNoteIndex,
                     isDemoPlaying = uiState.isDemoPlaying,
                     layout = keyboardLayout,
@@ -125,8 +122,6 @@ fun SongCoachScreen(
 @Composable
 fun SongCoachHeader(
     title: String,
-    currentLine: Int,
-    totalLines: Int,
     onBack: () -> Unit
 ) {
     Row(
@@ -134,27 +129,17 @@ fun SongCoachHeader(
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 8.dp)
             .statusBarsPadding(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
+        IconButton(onClick = onBack) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
         }
-
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "Line $currentLine / $totalLines",
-            style = MaterialTheme.typography.labelMedium,
-            color = PrimaryAccent,
-            modifier = Modifier.padding(end = 16.dp)
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
         )
     }
 }
