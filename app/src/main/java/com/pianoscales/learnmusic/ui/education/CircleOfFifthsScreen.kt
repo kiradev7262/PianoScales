@@ -186,6 +186,7 @@ fun CircleOfFifthsScreen(
                     ReferenceKeyboard(
                         highlightedNotes = keyboardNotes,
                         rootNote = keyboardRoot,
+                        isExplorer = uiState.interactiveMode == CircleInteractiveMode.NONE,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }

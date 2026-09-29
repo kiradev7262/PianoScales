@@ -27,13 +27,17 @@ fun ReferenceKeyboard(
     onKeyClick: (Note) -> Unit = {},
     highlightedNotes: List<Note> = emptyList(),
     rootNote: Note? = null,
+    isExplorer: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
     val activeHighlights = remember { mutableStateMapOf<Note, Boolean>() }
 
-    val startNote = remember(rootNote) { calculateBestStartNote(rootNote) }
+    val startNote = remember(rootNote, isExplorer) {
+        if (isExplorer && rootNote != null) rootNote else calculateBestStartNote(rootNote)
+    }
     val (whiteNotes, blackKeyList) = remember(startNote) { getKeyboardRange(startNote) }
+    val isBlackStart = remember(startNote) { !isWhiteKey(startNote) }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -61,51 +65,62 @@ fun ReferenceKeyboard(
                     .fillMaxWidth()
                     .height(180.dp)
             ) {
-                val whiteKeyWidth = maxWidth / 7
+                val totalWidth = maxWidth
+                val blackKeyWidthFactor = 0.65f
                 
-                // White Keys
-                Row(modifier = Modifier.fillMaxSize()) {
-                    whiteNotes.forEach { note ->
+                // If we start with a black key, we need space for half of it at the left.
+                val whiteKeyWidth = if (isBlackStart) {
+                    totalWidth / (7f + blackKeyWidthFactor / 2f)
+                } else {
+                    totalWidth / 7f
+                }
+                
+                val blackKeyWidth = whiteKeyWidth * blackKeyWidthFactor
+                val blackKeyHeight = 110.dp
+                val startPadding = if (isBlackStart) blackKeyWidth / 2 else 0.dp
+                
+                Box(modifier = Modifier.padding(start = startPadding)) {
+                    // White Keys
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        whiteNotes.forEach { note ->
+                            val isHighlighted = activeHighlights[note] == true || highlightedNotes.contains(note)
+                            WhiteKey(
+                                note = note,
+                                isHighlighted = isHighlighted,
+                                onClick = { 
+                                    activeHighlights[note] = true
+                                    coroutineScope.launch {
+                                        delay(200)
+                                        activeHighlights[note] = false
+                                    }
+                                    onKeyClick(note) 
+                                },
+                                modifier = Modifier
+                                    .width(whiteKeyWidth)
+                                    .fillMaxHeight()
+                            )
+                        }
+                    }
+                    
+                    // Black Keys Positioning
+                    blackKeyList.forEach { (note, whiteKeyOffset) ->
                         val isHighlighted = activeHighlights[note] == true || highlightedNotes.contains(note)
-                        WhiteKey(
+                        BlackKeyAt(
                             note = note,
                             isHighlighted = isHighlighted,
-                            onClick = { 
+                            onKeyClick = onKeyClick,
+                            onNoteTapped = { 
                                 activeHighlights[note] = true
                                 coroutineScope.launch {
                                     delay(200)
                                     activeHighlights[note] = false
                                 }
-                                onKeyClick(note) 
                             },
-                            modifier = Modifier
-                                .width(whiteKeyWidth)
-                                .fillMaxHeight()
+                            offset = whiteKeyWidth * whiteKeyOffset - (blackKeyWidth / 2),
+                            width = blackKeyWidth,
+                            height = blackKeyHeight
                         )
                     }
-                }
-                
-                // Black Keys Positioning
-                val blackKeyWidth = whiteKeyWidth * 0.65f
-                val blackKeyHeight = 110.dp
-                
-                blackKeyList.forEach { (note, whiteKeyOffset) ->
-                    val isHighlighted = activeHighlights[note] == true || highlightedNotes.contains(note)
-                    BlackKeyAt(
-                        note = note,
-                        isHighlighted = isHighlighted,
-                        onKeyClick = onKeyClick,
-                        onNoteTapped = { 
-                            activeHighlights[note] = true
-                            coroutineScope.launch {
-                                delay(200)
-                                activeHighlights[note] = false
-                            }
-                        },
-                        offset = whiteKeyWidth * whiteKeyOffset - (blackKeyWidth / 2),
-                        width = blackKeyWidth,
-                        height = blackKeyHeight
-                    )
                 }
             }
         }
@@ -228,15 +243,18 @@ private fun getKeyboardRange(startNote: Note): Pair<List<Note>, List<Pair<Note, 
     
     var whiteCount = 0
     var i = 0
-    // We want 7 white keys
+    
     while (whiteCount < 7) {
         val note = allNotes[(startOrdinal + i) % 12]
         if (isWhiteKey(note)) {
             whiteNotes.add(note)
             whiteCount++
         } else {
-            // A black key between whiteCount and whiteCount + 1 has offset = whiteCount
-            if (whiteCount in 1..6) {
+            // Include black keys. Offset is relative to whiteCount.
+            // If the startNote itself is black, its whiteCount will be 0 when i is 0.
+            if (whiteCount == 0 && i == 0) {
+                blackKeys.add(note to 0.0f)
+            } else if (whiteCount in 1..6) {
                 blackKeys.add(note to whiteCount.toFloat())
             }
         }
