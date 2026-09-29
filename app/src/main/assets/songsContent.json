@@ -6,6 +6,7 @@
         "difficulty": "Beginner",
         "available": true,
         "builtIn": true,
+        "startingNote": "F4",
         "version": 1,
         "lines": [
             ["G4","G4","A4","G4","C5","B4"],
@@ -21,6 +22,7 @@
         "difficulty": "Beginner",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             ["C4","C4","G4","G4","A4","A4","G4"],
@@ -38,6 +40,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             ["E4","E4","F4","G4","G4","F4","E4","D4"],
@@ -53,6 +56,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             ["E4","E4","E4"],
@@ -69,6 +73,7 @@
         "difficulty": "Advanced",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             ["E5","D#5","E5","D#5","E5","B4","D5","C5","A4"],
@@ -83,6 +88,7 @@
         "difficulty": "Advanced",
         "available": true,
         "builtIn": false,
+        "startingNote": "A4",
         "version": 1,
         "lines": [
             ["B4","E5","G5","F#5","E5","B5"],
@@ -97,6 +103,7 @@
         "difficulty": "Advanced",
         "available": true,
         "builtIn": false,
+        "startingNote": "G4",
         "version": 1,
         "lines": [
             ["A4","C5","D5","D5"],
@@ -112,6 +119,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             ["C5", "C#5", "C5", "C#5", "C5", "C#5", "C5", "A#4", "G#4"],
@@ -127,6 +135,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "C5",
         "version": 1,
         "lines": [
             ["G5", "E5", "A5", "E5", "F#5", "G5", "E5"],
@@ -140,6 +149,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "F4",
         "version": 1,
         "lines": [
             [
@@ -249,6 +259,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             [
@@ -299,6 +310,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             [
@@ -389,6 +401,7 @@
         "difficulty": "Beginner",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             [
@@ -458,6 +471,7 @@
         "difficulty": "Intermediate",
         "available": true,
         "builtIn": false,
+        "startingNote": "C4",
         "version": 1,
         "lines": [
             [
@@ -576,6 +590,7 @@
         "difficulty": "Custom",
         "available": true,
         "builtIn": false,
+        "startingNote": "F4",
         "version": 2,
         "createdAt": 1784356958141,
         "modifiedAt": 1784356958141,
@@ -639,7 +654,4 @@
             ]
         ]
     }
-
-
-
 ]

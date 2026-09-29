@@ -79,6 +79,9 @@ class SongRepositoryImpl @Inject constructor(
         val hasTimestamps = lines.any { line -> line.notes.any { it.timestamp != null } }
         
         val linesJson = JSONObject().apply {
+            if (!startingNote.isNullOrBlank()) {
+                put("startingNote", startingNote)
+            }
             put("lines", JSONArray().apply {
                 lines.forEach { line ->
                     put(JSONArray().apply {
@@ -116,10 +119,12 @@ class SongRepositoryImpl @Inject constructor(
 
     private fun CustomSongEntity.toDomain(): Song {
         val songLines = mutableListOf<SongLine>()
+        var startingNoteStr: String? = null
         try {
             val trimmed = linesJson.trim()
             if (trimmed.startsWith("{")) {
                 val root = JSONObject(linesJson)
+                startingNoteStr = root.optString("startingNote").takeIf { !it.isNullOrBlank() }
                 val linesArray = root.getJSONArray("lines")
                 val timestampsArray = root.optJSONArray("timestamps")
                 
@@ -166,6 +171,7 @@ class SongRepositoryImpl @Inject constructor(
             difficulty = difficulty,
             version = version,
             lines = songLines,
+            startingNote = startingNoteStr,
             builtIn = false,
             createdAt = createdAt,
             modifiedAt = modifiedAt
@@ -274,6 +280,7 @@ class SongRepositoryImpl @Inject constructor(
                         difficulty = obj.getString("difficulty"),
                         version = obj.optInt("version", 1),
                         lines = songLines,
+                        startingNote = obj.optString("startingNote").takeIf { !it.isNullOrBlank() },
                         builtIn = obj.optBoolean("builtIn", false),
                         createdAt = obj.optLong("createdAt", 0L),
                         modifiedAt = obj.optLong("modifiedAt", 0L)

@@ -2,14 +2,11 @@ package com.pianoscales.learnmusic.ui.songs
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,10 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.pianoscales.learnmusic.ui.components.InfoCard
-import com.pianoscales.learnmusic.ui.freestyle.FreestylePiano
 import com.pianoscales.learnmusic.ui.theme.*
 
 @Composable
@@ -33,6 +27,14 @@ fun SongCoachScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val song = uiState.song ?: return // Loading or not found
+
+    val startingNote = remember(song) {
+        resolveStartingNote(song)
+    }
+
+    val keyboardLayout = remember(startingNote) {
+        SongKeyboardLayout.create(startingNote, numWhiteKeys = 15)
+    }
 
     if (uiState.isCompleted) {
         SongCompletionDialog(
@@ -55,82 +57,66 @@ fun SongCoachScreen(
             onBack = onBack
         )
 
-        // Top Section
-        Box(
+        // Control Row
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(if (isLandscape) 0.23f else 0.3f)
-                .padding(if (isLandscape) 8.dp else 16.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isLandscape) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    uiState.currentLine?.let { line ->
-                        NoteDisplayArea(
-                            line = line,
-                            activeNoteIndex = uiState.currentNoteIndex,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-                    }
+            DemoButton(
+                isDemoPlaying = uiState.isDemoPlaying,
+                onClick = { viewModel.toggleDemo() }
+            )
 
-                    Spacer(modifier = Modifier.width(24.dp))
-
-                    DemoButton(
-                        isDemoPlaying = uiState.isDemoPlaying,
-                        onClick = { viewModel.toggleDemo() }
-                    )
-                }
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    uiState.currentLine?.let { line ->
-                        NoteDisplayArea(
-                            line = line,
-                            activeNoteIndex = uiState.currentNoteIndex
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    DemoButton(
-                        isDemoPlaying = uiState.isDemoPlaying,
-                        onClick = { viewModel.toggleDemo() }
-                    )
-                }
+            if (uiState.pianoMode == PianoMode.EXTERNAL) {
+                Text(
+                    text = "🎤 Listening for notes...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SuccessAccent,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
-        // Bottom Section - Keyboard
-        Box(
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Main Section: Falling Notes Visualization + Virtual Piano Keyboard
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(if (isLandscape) 0.8f else 0.7f)
-                .background(CardSurface)
+                .weight(1f)
         ) {
-            Column {
-                FreestylePiano(
-                    onNoteClick = { note, octave -> 
+            val totalHeight = maxHeight
+            val pianoHeight = if (isLandscape) totalHeight * 0.35f else totalHeight * 0.25f
+            val fallingAreaHeight = totalHeight - pianoHeight
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Falling Piano Notes (~75% height)
+                SongFallingNotesView(
+                    song = song,
+                    currentLineIndex = uiState.currentLineIndex,
+                    currentNoteIndex = uiState.currentNoteIndex,
+                    isDemoPlaying = uiState.isDemoPlaying,
+                    layout = keyboardLayout,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(fallingAreaHeight)
+                )
+
+                // Responsive Virtual Keyboard (~25% height)
+                SongVirtualKeyboard(
+                    layout = keyboardLayout,
+                    targetNote = uiState.currentNote,
+                    enabled = uiState.pianoMode == PianoMode.VIRTUAL && !uiState.isDemoPlaying,
+                    onNotePlayed = { note, octave ->
                         viewModel.onNotePlayed(note, octave)
                     },
-                    height = 300.dp,
-                    blackKeyHeightRatio = if (isLandscape) 0.5f else 0.55f,
-                    enabled = uiState.pianoMode == PianoMode.VIRTUAL && !uiState.isDemoPlaying
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(pianoHeight)
                 )
-                if (!isLandscape) {
-                    Box(modifier = Modifier.padding(16.dp)) {
-                        InfoCard(
-                            title = if (uiState.pianoMode == PianoMode.VIRTUAL) "Tip" else "External Mode Active",
-                            description = if (uiState.pianoMode == PianoMode.VIRTUAL) {
-                                "Rotate your device to landscape mode for a wider keyboard and the best playing experience."
-                            } else {
-                                "Play the notes on your real piano. Piano Scales is listening..."
-                            }
-                        )
-                    }
-                }
             }
         }
     }
@@ -163,83 +149,12 @@ fun SongCoachHeader(
                 color = TextPrimary
             )
         }
-        
+
         Text(
             text = "Line $currentLine / $totalLines",
             style = MaterialTheme.typography.labelMedium,
             color = PrimaryAccent,
             modifier = Modifier.padding(end = 16.dp)
-        )
-    }
-}
-
-@Composable
-fun NoteDisplayArea(
-    line: SongLine,
-    activeNoteIndex: Int,
-    modifier: Modifier = Modifier
-) {
-    val lazyListState = rememberLazyListState()
-
-    // Reset scroll when line changes
-    LaunchedEffect(line) {
-        lazyListState.scrollToItem(0)
-    }
-
-    // Auto-scroll to active note
-    LaunchedEffect(activeNoteIndex) {
-        if (activeNoteIndex >= 0) {
-            // Keep the active note slightly left of center (second or third visible item)
-            val targetScrollIndex = (activeNoteIndex - 1).coerceAtLeast(0)
-            lazyListState.animateScrollToItem(targetScrollIndex)
-        }
-    }
-
-    LazyRow(
-        state = lazyListState,
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-        contentPadding = PaddingValues(horizontal = 16.dp)
-    ) {
-        itemsIndexed(line.notes) { index, noteWithOctave ->
-            val isActive = index == activeNoteIndex
-            val isCompleted = index < activeNoteIndex
-            
-            NoteItem(
-                note = "${noteWithOctave.note.displayName}${noteWithOctave.octave}",
-                isActive = isActive,
-                isCompleted = isCompleted
-            )
-        }
-    }
-}
-
-@Composable
-fun NoteItem(
-    note: String,
-    isActive: Boolean,
-    isCompleted: Boolean
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        if (isActive) {
-            Text("▶", color = PrimaryAccent, fontSize = 12.sp)
-        } else if (isCompleted) {
-            Text("✓", color = SuccessAccent, fontSize = 12.sp)
-        } else {
-            // Placeholder to keep baseline alignment
-            Text("", fontSize = 12.sp)
-        }
-        
-        Text(
-            text = note,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Medium,
-            color = when {
-                isActive -> PrimaryAccent
-                isCompleted -> SuccessAccent
-                else -> TextMuted
-            }
         )
     }
 }

@@ -9,6 +9,7 @@ data class Song(
     val difficulty: String,
     val version: Int,
     val lines: List<SongLine>,
+    val startingNote: String? = null,
     val builtIn: Boolean = false,
     val createdAt: Long = 0L,
     val modifiedAt: Long = 0L
@@ -52,5 +53,7 @@ val HappyBirthday = Song(
             NoteWithOctave(Note.F, 5), NoteWithOctave(Note.F, 5), NoteWithOctave(Note.E, 5), 
             NoteWithOctave(Note.C, 5), NoteWithOctave(Note.D, 5), NoteWithOctave(Note.C, 5)
         ))
-    )
+    ),
+    startingNote = "F4",
+    builtIn = true
 )
