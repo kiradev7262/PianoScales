@@ -1,5 +1,6 @@
 package com.pianoscales.learnmusic.ui.songs
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -32,7 +33,9 @@ data class SongCoachUiState(
     val detectedFrequency: Float = 0f,
     val confidence: Float = 0f,
     val timestamp: Long = 0L,
-    val pianoBuddyConnectionState: BleConnectionState = BleConnectionState.IDLE
+    val pianoBuddyConnectionState: BleConnectionState = BleConnectionState.IDLE,
+    val isRecordingTiming: Boolean = false,
+    val recordedTimestampsCount: Int = 0
 ) {
     val currentNote: NoteWithOctave? get() = song?.notes?.getOrNull(currentNoteIndex)
 }
@@ -62,6 +65,9 @@ class SongCoachViewModel @Inject constructor(
     private var silenceCounter = 0
     private val REQUIRED_SILENCE_FRAMES = 3 // ~60-100ms at typical detection rates
 
+    private var recordingStartTime: Long? = null
+    private val tempTimestamps = mutableListOf<Long>()
+
     init {
         val songId: String? = savedStateHandle["songId"]
         if (songId != null) {
@@ -70,11 +76,15 @@ class SongCoachViewModel @Inject constructor(
                     songRepository.getSongs(),
                     songRepository.getCustomSongs()
                 ) { builtIn, custom ->
-                    builtIn + custom
-                }.collect { allSongs ->
-                    val song = allSongs.find { it.songId == songId }
+                    val customMap = custom.associateBy { it.songId }
+                    val builtInMap = builtIn.associateBy { it.songId }
+                    builtInMap + customMap
+                }.collect { songMap ->
+                    val song = songMap[songId]
                     if (song != null) {
-                        _uiState.update { it.copy(song = song) }
+                        _uiState.update { state ->
+                            if (state.isRecordingTiming) state else state.copy(song = song)
+                        }
                         sendTargetNoteToPianoBuddy()
                     }
                 }
@@ -162,6 +172,91 @@ class SongCoachViewModel @Inject constructor(
         evaluateNote(note, octave)
     }
 
+    private fun recordNoteTimingIfNeeded(index: Int) {
+        if (!_uiState.value.isRecordingTiming) return
+
+        val now = SystemClock.elapsedRealtime()
+        val start = recordingStartTime
+        if (index == 0 || start == null) {
+            recordingStartTime = now
+            tempTimestamps.clear()
+            tempTimestamps.add(0L)
+        } else {
+            val elapsed = (now - start).coerceAtLeast(0L)
+            while (tempTimestamps.size < index) {
+                tempTimestamps.add(tempTimestamps.lastOrNull() ?: 0L)
+            }
+            if (tempTimestamps.size == index) {
+                tempTimestamps.add(elapsed)
+            } else {
+                tempTimestamps[index] = elapsed
+            }
+        }
+        _uiState.update { it.copy(recordedTimestampsCount = tempTimestamps.size) }
+    }
+
+    fun startRecordTiming() {
+        stopDemo()
+        recordingStartTime = null
+        tempTimestamps.clear()
+        _uiState.update {
+            it.copy(
+                isRecordingTiming = true,
+                recordedTimestampsCount = 0,
+                currentNoteIndex = 0,
+                isCompleted = false
+            )
+        }
+        inputState = InputState.WAITING_FOR_PRESS
+        lastMatchedMidi = null
+        silenceCounter = 0
+        sendTargetNoteToPianoBuddy()
+    }
+
+    fun cancelRecordTiming() {
+        recordingStartTime = null
+        tempTimestamps.clear()
+        _uiState.update {
+            it.copy(
+                isRecordingTiming = false,
+                recordedTimestampsCount = 0
+            )
+        }
+    }
+
+    fun saveRecordedTiming() {
+        val currentSong = _uiState.value.song ?: return
+        if (tempTimestamps.isEmpty()) return
+
+        var idx = 0
+        val updatedLines = currentSong.lines.map { line ->
+            val updatedNotes = line.notes.map { noteWithOctave ->
+                val ts = tempTimestamps.getOrNull(idx)
+                idx++
+                if (ts != null) noteWithOctave.copy(timestamp = ts) else noteWithOctave
+            }
+            SongLine(notes = updatedNotes)
+        }
+
+        val updatedSong = currentSong.copy(
+            lines = updatedLines,
+            modifiedAt = System.currentTimeMillis()
+        )
+
+        viewModelScope.launch {
+            songRepository.saveSong(updatedSong)
+            _uiState.update {
+                it.copy(
+                    song = updatedSong,
+                    isRecordingTiming = false,
+                    recordedTimestampsCount = 0
+                )
+            }
+            recordingStartTime = null
+            tempTimestamps.clear()
+        }
+    }
+
     private fun evaluateNote(note: Note, octave: Int) {
         val state = _uiState.value
         if (state.isCompleted || state.song == null || state.isDemoPlaying) return
@@ -187,6 +282,7 @@ class SongCoachViewModel @Inject constructor(
 
             if (note == expected.note && octave == expected.octave) {
                 Log.d("SongCoach_BLE", "Match Detected: $note$octave. Current Index: ${state.currentNoteIndex}")
+                recordNoteTimingIfNeeded(state.currentNoteIndex)
                 advance()
                 inputState = InputState.WAITING_FOR_RELEASE
                 lastMatchedMidi = detectedMidi
@@ -195,6 +291,7 @@ class SongCoachViewModel @Inject constructor(
             // Virtual piano - legacy behavior (no release required)
             val expected = state.currentNote ?: return
             if (note == expected.note && octave == expected.octave) {
+                recordNoteTimingIfNeeded(state.currentNoteIndex)
                 advance()
             }
         }
@@ -251,6 +348,7 @@ class SongCoachViewModel @Inject constructor(
     }
 
     fun toggleDemo() {
+        if (_uiState.value.isRecordingTiming) return
         if (_uiState.value.isDemoPlaying) {
             stopDemo()
         } else {
@@ -312,7 +410,11 @@ class SongCoachViewModel @Inject constructor(
 
     fun reset() {
         if (_uiState.value.isDemoPlaying) stopDemo()
-        _uiState.update { it.copy(currentNoteIndex = 0, isCompleted = false) }
+        if (_uiState.value.isRecordingTiming) {
+            recordingStartTime = null
+            tempTimestamps.clear()
+        }
+        _uiState.update { it.copy(currentNoteIndex = 0, isCompleted = false, recordedTimestampsCount = 0) }
         inputState = InputState.WAITING_FOR_PRESS
         lastMatchedMidi = null
         silenceCounter = 0

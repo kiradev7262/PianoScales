@@ -1,16 +1,23 @@
 package com.pianoscales.learnmusic.ui.songs
 
+import android.content.res.Configuration
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,12 +41,26 @@ fun SongCoachScreen(
         SongKeyboardLayout.create(startingNote, numWhiteKeys = 15)
     }
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var isPianoExpanded by rememberSaveable { mutableStateOf(false) }
+
+    val pianoRatio = if (isLandscape && isPianoExpanded) 0.50f else 0.33f
+
     if (uiState.isCompleted) {
-        SongCompletionDialog(
-            songTitle = song.title,
-            onPlayAgain = { viewModel.reset() },
-            onBackToSongs = onBack
-        )
+        if (uiState.isRecordingTiming) {
+            TimingRecordedDialog(
+                songTitle = song.title,
+                onSaveTiming = { viewModel.saveRecordedTiming() },
+                onDiscardTiming = { viewModel.cancelRecordTiming() }
+            )
+        } else {
+            SongCompletionDialog(
+                songTitle = song.title,
+                onPlayAgain = { viewModel.reset() },
+                onBackToSongs = onBack
+            )
+        }
     }
 
     Column(
@@ -47,14 +68,68 @@ fun SongCoachScreen(
             .fillMaxSize()
             .background(PrimaryBackground)
     ) {
-        // Header with title and compact Listen Demo action
+        // Header with title, Listen Demo, and Record Timing actions
         SongCoachHeader(
             title = song.title,
             isDemoPlaying = uiState.isDemoPlaying,
+            isRecordingTiming = uiState.isRecordingTiming,
             onDemoClick = { viewModel.toggleDemo() },
+            onStartRecordTiming = { viewModel.startRecordTiming() },
             onBack = onBack,
             pianoMode = uiState.pianoMode
         )
+
+        // Banner when Record Timing is active
+        if (uiState.isRecordingTiming) {
+            Surface(
+                color = CardSurface,
+                tonalElevation = 2.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(ErrorAccent, CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Recording timing (${uiState.recordedTimestampsCount}/${song.notes.size})",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
+                    Row {
+                        TextButton(
+                            onClick = { viewModel.cancelRecordTiming() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Cancel", color = TextMuted, style = MaterialTheme.typography.labelSmall)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Button(
+                            onClick = { viewModel.saveRecordedTiming() },
+                            colors = ButtonDefaults.buttonColors(containerColor = SuccessAccent),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Save", color = PrimaryBackground, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
 
         // Main Section: Falling Notes Visualization + Virtual Piano Keyboard
         BoxWithConstraints(
@@ -63,11 +138,11 @@ fun SongCoachScreen(
                 .weight(1f)
         ) {
             val totalHeight = maxHeight
-            val pianoHeight = totalHeight * 0.33f
+            val pianoHeight = totalHeight * pianoRatio
             val fallingAreaHeight = totalHeight - pianoHeight
 
             Column(modifier = Modifier.fillMaxSize()) {
-                // Falling Piano Notes (~67% height)
+                // Falling Piano Notes Area
                 SongFallingNotesView(
                     song = song,
                     currentNoteIndex = uiState.currentNoteIndex,
@@ -78,18 +153,41 @@ fun SongCoachScreen(
                         .height(fallingAreaHeight)
                 )
 
-                // Responsive Virtual Keyboard (~33% height)
-                SongVirtualKeyboard(
-                    layout = keyboardLayout,
-                    targetNote = uiState.currentNote,
-                    enabled = (uiState.pianoMode == PianoMode.VIRTUAL) && !uiState.isDemoPlaying,
-                    onNotePlayed = { note, octave ->
-                        viewModel.onNotePlayed(note, octave)
-                    },
+                // Virtual Keyboard Container
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(pianoHeight)
-                )
+                ) {
+                    SongVirtualKeyboard(
+                        layout = keyboardLayout,
+                        targetNote = uiState.currentNote,
+                        enabled = (uiState.pianoMode == PianoMode.VIRTUAL) && !uiState.isDemoPlaying,
+                        onNotePlayed = { note, octave ->
+                            viewModel.onNotePlayed(note, octave)
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Expand / Collapse Arrow Icon (Only in Landscape Orientation)
+                    if (isLandscape) {
+                        IconButton(
+                            onClick = { isPianoExpanded = !isPianoExpanded },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 8.dp, top = 4.dp)
+                                .size(28.dp)
+                                .background(CardSurface.copy(alpha = 0.85f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = if (isPianoExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                                contentDescription = if (isPianoExpanded) "Collapse Keyboard" else "Expand Keyboard",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -99,7 +197,9 @@ fun SongCoachScreen(
 fun SongCoachHeader(
     title: String,
     isDemoPlaying: Boolean,
+    isRecordingTiming: Boolean,
     onDemoClick: () -> Unit,
+    onStartRecordTiming: () -> Unit,
     onBack: () -> Unit,
     pianoMode: PianoMode = PianoMode.VIRTUAL
 ) {
@@ -138,9 +238,43 @@ fun SongCoachHeader(
                 )
             }
         }
-        DemoButton(
-            isDemoPlaying = isDemoPlaying,
-            onClick = onDemoClick
+
+        if (!isRecordingTiming) {
+            RecordTimingButton(onClick = onStartRecordTiming)
+            Spacer(modifier = Modifier.width(6.dp))
+            DemoButton(
+                isDemoPlaying = isDemoPlaying,
+                onClick = onDemoClick
+            )
+        }
+    }
+}
+
+@Composable
+fun RecordTimingButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedButton(
+        onClick = onClick,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = TextPrimary
+        ),
+        border = BorderStroke(1.dp, TextMuted.copy(alpha = 0.5f)),
+        shape = CircleShape,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        modifier = modifier.heightIn(min = 32.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(ErrorAccent, CircleShape)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "Record Timing",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -204,3 +338,31 @@ fun SongCompletionDialog(
     )
 }
 
+@Composable
+fun TimingRecordedDialog(
+    songTitle: String,
+    onSaveTiming: () -> Unit,
+    onDiscardTiming: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { },
+        title = { Text("🎉 Timing Recording Complete!") },
+        text = { Text("New timing for \"$songTitle\" has been captured. Save this new timing?") },
+        confirmButton = {
+            Button(
+                onClick = onSaveTiming,
+                colors = ButtonDefaults.buttonColors(containerColor = SuccessAccent)
+            ) {
+                Text("Save Timing", color = PrimaryBackground, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDiscardTiming) {
+                Text("Discard", color = TextMuted)
+            }
+        },
+        containerColor = CardSurface,
+        titleContentColor = TextPrimary,
+        textContentColor = TextSecondary
+    )
+}
