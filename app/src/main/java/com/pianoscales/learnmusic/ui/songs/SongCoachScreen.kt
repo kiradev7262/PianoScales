@@ -1,8 +1,8 @@
 package com.pianoscales.learnmusic.ui.songs
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -11,8 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pianoscales.learnmusic.ui.theme.*
@@ -23,8 +23,6 @@ fun SongCoachScreen(
     viewModel: SongCoachViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val song = uiState.song ?: return // Loading or not found
 
@@ -49,36 +47,14 @@ fun SongCoachScreen(
             .fillMaxSize()
             .background(PrimaryBackground)
     ) {
-        // Header
+        // Header with title and compact Listen Demo action
         SongCoachHeader(
             title = song.title,
-            onBack = onBack
+            isDemoPlaying = uiState.isDemoPlaying,
+            onDemoClick = { viewModel.toggleDemo() },
+            onBack = onBack,
+            pianoMode = uiState.pianoMode
         )
-
-        // Control Row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            DemoButton(
-                isDemoPlaying = uiState.isDemoPlaying,
-                onClick = { viewModel.toggleDemo() }
-            )
-
-            if (uiState.pianoMode == PianoMode.EXTERNAL) {
-                Text(
-                    text = "🎤 Listening for notes...",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SuccessAccent,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
 
         // Main Section: Falling Notes Visualization + Virtual Piano Keyboard
         BoxWithConstraints(
@@ -87,11 +63,11 @@ fun SongCoachScreen(
                 .weight(1f)
         ) {
             val totalHeight = maxHeight
-            val pianoHeight = if (isLandscape) totalHeight * 0.35f else totalHeight * 0.25f
+            val pianoHeight = totalHeight * 0.33f
             val fallingAreaHeight = totalHeight - pianoHeight
 
             Column(modifier = Modifier.fillMaxSize()) {
-                // Falling Piano Notes (~75% height)
+                // Falling Piano Notes (~67% height)
                 SongFallingNotesView(
                     song = song,
                     currentNoteIndex = uiState.currentNoteIndex,
@@ -102,11 +78,11 @@ fun SongCoachScreen(
                         .height(fallingAreaHeight)
                 )
 
-                // Responsive Virtual Keyboard (~25% height)
+                // Responsive Virtual Keyboard (~33% height)
                 SongVirtualKeyboard(
                     layout = keyboardLayout,
                     targetNote = uiState.currentNote,
-                    enabled = uiState.pianoMode == PianoMode.VIRTUAL && !uiState.isDemoPlaying,
+                    enabled = (uiState.pianoMode == PianoMode.VIRTUAL) && !uiState.isDemoPlaying,
                     onNotePlayed = { note, octave ->
                         viewModel.onNotePlayed(note, octave)
                     },
@@ -122,7 +98,10 @@ fun SongCoachScreen(
 @Composable
 fun SongCoachHeader(
     title: String,
-    onBack: () -> Unit
+    isDemoPlaying: Boolean,
+    onDemoClick: () -> Unit,
+    onBack: () -> Unit,
+    pianoMode: PianoMode = PianoMode.VIRTUAL
 ) {
     Row(
         modifier = Modifier
@@ -134,12 +113,34 @@ fun SongCoachHeader(
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
+        Spacer(modifier = Modifier.width(4.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (pianoMode == PianoMode.EXTERNAL) {
+                Text(
+                    text = "🎤 Listening for notes...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SuccessAccent,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        DemoButton(
+            isDemoPlaying = isDemoPlaying,
+            onClick = onDemoClick
         )
     }
 }
@@ -147,7 +148,8 @@ fun SongCoachHeader(
 @Composable
 fun DemoButton(
     isDemoPlaying: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
@@ -155,18 +157,19 @@ fun DemoButton(
             containerColor = if (isDemoPlaying) ErrorAccent else PrimaryAccent,
             contentColor = TextPrimary
         ),
-        shape = MaterialTheme.shapes.medium,
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+        shape = CircleShape,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        modifier = modifier.heightIn(min = 32.dp)
     ) {
         Icon(
             imageVector = if (isDemoPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
             contentDescription = null,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = if (isDemoPlaying) "Stop Demo" else "Listen Demo",
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
     }
@@ -200,3 +203,4 @@ fun SongCompletionDialog(
         textContentColor = TextSecondary
     )
 }
+
